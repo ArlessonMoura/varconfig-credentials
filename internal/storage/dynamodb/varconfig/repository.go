@@ -17,6 +17,9 @@ import (
 	"fmt"
 	"time"
 
+	"projeto-crud-credencials/internal/common/errors"
+	"projeto-crud-credencials/internal/common/logger"
+	metrics "projeto-crud-credencials/internal/common/metrics"
 	svcvarconfig "projeto-crud-credencials/internal/service/domain/varconfig"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -27,15 +30,19 @@ import (
 
 // Repository implementa VarConfigRepository usando DynamoDB
 type Repository struct {
-	client *dynamodb.Client
+	client    *dynamodb.Client
 	tableName string
+	logger    logger.Logger
+	metrics   metrics.Collector
 }
 
 // NewRepository cria uma nova instância do repository
 func NewRepository(client *dynamodb.Client, tableName string) *Repository {
 	return &Repository{
-		client: client,
+		client:    client,
 		tableName: tableName,
+		logger:    logger.GetGlobalLogger(),
+		metrics:   &metrics.DefaultCollector{},
 	}
 }
 
@@ -61,13 +68,20 @@ func buildSK(id int64) string {
 }
 
 // Save persiste um novo VarConfig
-func (r *Repository) Save(config svcvarconfig.VarConfig) (svcvarconfig.VarConfig, error) {
+func (r *Repository) Save(ctx context.Context, config svcvarconfig.VarConfig) (svcvarconfig.VarConfig, error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.RecordLatency(ctx, metrics.StorageVarConfigCreateLatency, time.Since(start))
+	}()
+
 	now := time.Now().UTC()
 	
 	// Gerar ID único se não existir
 	if config.ID == 0 {
 		config.ID = time.Now().UnixNano()
 	}
+
+	r.logger.Debug(ctx, "Salvando VarConfig ID=%d para orgID=%d, benchmarkID=%s", config.ID, config.OrgID, config.BenchmarkID)
 
 	model := DynamoDBModel{
 		PK:          buildPK(config.OrgID, config.BenchmarkID),
@@ -83,7 +97,9 @@ func (r *Repository) Save(config svcvarconfig.VarConfig) (svcvarconfig.VarConfig
 	if config.Payload != nil {
 		payloadData, err := json.Marshal(config.Payload)
 		if err != nil {
-			return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao serializar payload: %w", err)
+			r.metrics.RecordFailure(ctx, metrics.StorageVarConfigCreateFailures)
+			r.logger.Error(ctx, "Erro ao serializar payload: %v", err)
+			return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao serializar payload", err)
 		}
 		model.Payload = string(payloadData)
 	}
@@ -91,60 +107,87 @@ func (r *Repository) Save(config svcvarconfig.VarConfig) (svcvarconfig.VarConfig
 	// Converter para formato DynamoDB
 	item, err := attributevalue.MarshalMap(model)
 	if err != nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao converter item para DynamoDB: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigCreateFailures)
+		r.logger.Error(ctx, "Erro ao converter item para DynamoDB: %v", err)
+		return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao converter item para DynamoDB", err)
 	}
 
 	// Inserir no DynamoDB
-	_, err = r.client.PutItem(context.TODO(), &dynamodb.PutItemInput{
+	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: aws.String(r.tableName),
 		Item:      item,
 	})
 
 	if err != nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao salvar VarConfig: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigCreateFailures)
+		r.logger.Error(ctx, "Erro ao salvar VarConfig no DynamoDB: %v", err)
+		return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao salvar VarConfig", err)
 	}
 
 	// Definir timestamps no objeto de retorno
 	config.CreatedAt = now
 	config.UpdatedAt = now
 
+	r.logger.Info(ctx, "VarConfig salvo com sucesso, ID=%d", config.ID)
 	return config, nil
 }
 
 // FindByID obtém um VarConfig específico
-func (r *Repository) FindByID(orgID int64, benchmarkID string, id int64) (svcvarconfig.VarConfig, error) {
+func (r *Repository) FindByID(ctx context.Context, orgID int64, benchmarkID string, id int64) (svcvarconfig.VarConfig, error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.RecordLatency(ctx, metrics.StorageVarConfigGetLatency, time.Since(start))
+	}()
+
+	r.logger.Debug(ctx, "Buscando VarConfig orgID=%d, benchmarkID=%s, id=%d", orgID, benchmarkID, id)
+
 	key, err := attributevalue.MarshalMap(map[string]string{
 		"PK": buildPK(orgID, benchmarkID),
 		"SK": buildSK(id),
 	})
 	if err != nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao criar chave: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigGetFailures)
+		r.logger.Error(ctx, "Erro ao criar chave: %v", err)
+		return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao criar chave", err)
 	}
 
-	result, err := r.client.GetItem(context.TODO(), &dynamodb.GetItemInput{
+	result, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.tableName),
 		Key:       key,
 	})
 
 	if err != nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao buscar VarConfig: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigGetFailures)
+		r.logger.Error(ctx, "Erro ao buscar VarConfig no DynamoDB: %v", err)
+		return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao buscar VarConfig", err)
 	}
 
 	if result.Item == nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("VarConfig não encontrado")
+		r.logger.Debug(ctx, "VarConfig não encontrado")
+		return svcvarconfig.VarConfig{}, errors.NewNotFoundError("VarConfig")
 	}
 
 	var model DynamoDBModel
 	err = attributevalue.UnmarshalMap(result.Item, &model)
 	if err != nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao desserializar item: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigGetFailures)
+		r.logger.Error(ctx, "Erro ao desserializar item: %v", err)
+		return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao desserializar item", err)
 	}
 
+	r.logger.Debug(ctx, "VarConfig encontrado com sucesso")
 	return r.fromModel(&model)
 }
 
 // FindAllByBenchmark lista todos os VarConfigs de um benchmark
-func (r *Repository) FindAllByBenchmark(orgID int64, benchmarkID string) ([]svcvarconfig.VarConfig, error) {
+func (r *Repository) FindAllByBenchmark(ctx context.Context, orgID int64, benchmarkID string) ([]svcvarconfig.VarConfig, error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.RecordLatency(ctx, metrics.StorageVarConfigListLatency, time.Since(start))
+	}()
+
+	r.logger.Debug(ctx, "Listando VarConfigs para orgID=%d, benchmarkID=%s", orgID, benchmarkID)
+
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
 		KeyConditionExpression: aws.String("PK = :pk"),
@@ -153,9 +196,11 @@ func (r *Repository) FindAllByBenchmark(orgID int64, benchmarkID string) ([]svcv
 		},
 	}
 
-	result, err := r.client.Query(context.TODO(), input)
+	result, err := r.client.Query(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao buscar VarConfigs: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigListFailures)
+		r.logger.Error(ctx, "Erro ao listar VarConfigs no DynamoDB: %v", err)
+		return nil, errors.NewStorageError("Erro ao listar VarConfigs", err)
 	}
 
 	var configs []svcvarconfig.VarConfig
@@ -163,24 +208,34 @@ func (r *Repository) FindAllByBenchmark(orgID int64, benchmarkID string) ([]svcv
 		var model DynamoDBModel
 		err := attributevalue.UnmarshalMap(item, &model)
 		if err != nil {
+			r.logger.Warn(ctx, "Pulando item inválido: %v", err)
 			continue // Pular itens inválidos
 		}
 
 		config, err := r.fromModel(&model)
 		if err != nil {
+			r.logger.Warn(ctx, "Pulando item com erro: %v", err)
 			continue // Pular itens com erro
 		}
 
 		configs = append(configs, config)
 	}
 
+	r.logger.Info(ctx, "Listados %d VarConfigs com sucesso", len(configs))
 	return configs, nil
 }
 
 // Update atualiza um VarConfig existente
-func (r *Repository) Update(config svcvarconfig.VarConfig) (svcvarconfig.VarConfig, error) {
+func (r *Repository) Update(ctx context.Context, config svcvarconfig.VarConfig) (svcvarconfig.VarConfig, error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.RecordLatency(ctx, metrics.StorageVarConfigUpdateLatency, time.Since(start))
+	}()
+
 	now := time.Now().UTC()
 	config.UpdatedAt = now
+
+	r.logger.Debug(ctx, "Atualizando VarConfig ID=%d para orgID=%d, benchmarkID=%s", config.ID, config.OrgID, config.BenchmarkID)
 
 	model := DynamoDBModel{
 		PK:          buildPK(config.OrgID, config.BenchmarkID),
@@ -195,7 +250,9 @@ func (r *Repository) Update(config svcvarconfig.VarConfig) (svcvarconfig.VarConf
 	if config.Payload != nil {
 		payloadData, err := json.Marshal(config.Payload)
 		if err != nil {
-			return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao serializar payload: %w", err)
+			r.metrics.RecordFailure(ctx, metrics.StorageVarConfigUpdateFailures)
+			r.logger.Error(ctx, "Erro ao serializar payload: %v", err)
+			return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao serializar payload", err)
 		}
 		model.Payload = string(payloadData)
 	}
@@ -217,16 +274,26 @@ func (r *Repository) Update(config svcvarconfig.VarConfig) (svcvarconfig.VarConf
 		ExpressionAttributeValues: expressionValues,
 	}
 
-	_, err := r.client.UpdateItem(context.TODO(), input)
+	_, err := r.client.UpdateItem(ctx, input)
 	if err != nil {
-		return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao atualizar VarConfig: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigUpdateFailures)
+		r.logger.Error(ctx, "Erro ao atualizar VarConfig no DynamoDB: %v", err)
+		return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao atualizar VarConfig", err)
 	}
 
+	r.logger.Info(ctx, "VarConfig atualizado com sucesso")
 	return config, nil
 }
 
 // Delete remove um VarConfig
-func (r *Repository) Delete(orgID int64, benchmarkID string, id int64) error {
+func (r *Repository) Delete(ctx context.Context, orgID int64, benchmarkID string, id int64) error {
+	start := time.Now()
+	defer func() {
+		r.metrics.RecordLatency(ctx, metrics.StorageVarConfigDeleteLatency, time.Since(start))
+	}()
+
+	r.logger.Debug(ctx, "Deletando VarConfig ID=%d para orgID=%d, benchmarkID=%s", id, orgID, benchmarkID)
+
 	input := &dynamodb.DeleteItemInput{
 		TableName: aws.String(r.tableName),
 		Key: map[string]types.AttributeValue{
@@ -235,11 +302,14 @@ func (r *Repository) Delete(orgID int64, benchmarkID string, id int64) error {
 		},
 	}
 
-	_, err := r.client.DeleteItem(context.TODO(), input)
+	_, err := r.client.DeleteItem(ctx, input)
 	if err != nil {
-		return fmt.Errorf("erro ao deletar VarConfig: %w", err)
+		r.metrics.RecordFailure(ctx, metrics.StorageVarConfigDeleteFailures)
+		r.logger.Error(ctx, "Erro ao deletar VarConfig no DynamoDB: %v", err)
+		return errors.NewStorageError("Erro ao deletar VarConfig", err)
 	}
 
+	r.logger.Info(ctx, "VarConfig deletado com sucesso")
 	return nil
 }
 
@@ -276,7 +346,8 @@ func (r *Repository) fromModel(model *DynamoDBModel) (svcvarconfig.VarConfig, er
 	if model.Payload != "" {
 		err := json.Unmarshal([]byte(model.Payload), &config.Payload)
 		if err != nil {
-			return svcvarconfig.VarConfig{}, fmt.Errorf("erro ao desserializar payload: %w", err)
+			r.logger.Warn(context.Background(), "Erro ao desserializar payload: %v", err)
+			return svcvarconfig.VarConfig{}, errors.NewStorageError("Erro ao desserializar payload", err)
 		}
 	}
 
