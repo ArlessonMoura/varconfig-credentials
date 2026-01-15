@@ -11,7 +11,6 @@ import (
 )
 
 // InitHandler inicializa o handler com todas as dependências
-// Esta função implementa o padrão de wiring descrito em ARCHITECTURE.md
 func InitHandler(client *dynamodb.Client, tableName string) *Handler {
 	// Instancia o repository (storage)
 	repositoryImpl := storagevarconfig.NewRepository(client, tableName)
