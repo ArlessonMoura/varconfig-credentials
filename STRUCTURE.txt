@@ -6,12 +6,34 @@ projeto-crud-credencials/
 │   └── STRUCTURE.txt                (Este arquivo)
 │
 ├── 🧪 TESTES & SCRIPTS
-│   └── test.sh                      (Script para rodar testes)
+│   ├── test.sh                      (Script para rodar testes)
+│   ├── setup-dynamodb.sh            (Setup tabela DynamoDB)
+│   └── check-schema.sh              (Verificar schema)
 │
 ├── 📦 DEPENDÊNCIAS
 │   └── go.mod                       (AWS SDK v2 + Gin)
 │
-├── 🎯 CAMADA: Handler (HTTP)
+├── 🚀 CAMADA: Common (Infraestrutura Compartilhada)
+│   └── internal/common/
+│       ├── errors/                  (Tratamento centralizado de erros)
+│       │   └── errors.go
+│       │       ├── AppError struct
+│       │       ├── NewValidationError()
+│       │       ├── NewNotFoundError()
+│       │       ├── NewStorageError()
+│       │       └── NewBusinessError()
+│       ├── logger/                   (Logging centralizado)
+│       │   └── logger.go
+│       │       ├── Logger interface
+│       │       ├── DefaultLogger impl
+│       │       └── GetGlobalLogger()
+│       └── metrics/                  (Métricas centralizadas)
+│           └── metrics.go
+│               ├── Collector interface
+│               ├── DefaultCollector impl
+│               └── Constantes (service_*, storage_*)
+│
+├── 🌐 CAMADA: Handler (HTTP)
 │   └── pkg/handler/varconfig/
 │       ├── doc.go                   (Package comment)
 │       ├── handler.go                (Manipuladores HTTP)
@@ -26,34 +48,36 @@ projeto-crud-credencials/
 │           ├── InitHandler()
 │           └── RegisterRoutes()
 │
-├── 🔧 CAMADA: Service (Negócio)
+├── 🎯 CAMADA: Service (Negócio)
 │   └── internal/service/domain/varconfig/
 │       ├── models.go                (Struct de domínio)
 │       │   └── VarConfig{ID, OrgID, BenchmarkID, Payload, ...}
-│       ├── ports.go                 (Interface de repositório)
-│       │   └── VarConfigRepository (contrato)
+│       ├── ports.go                 (Interfaces de contratos)
+│       │   ├── VarConfigRepository (storage port)
+│       │   └── VarConfigUseCase (service interface)
 │       ├── service.go               (Lógica de negócio)
-│       │   ├── NewService()
-│       │   ├── Create()
-│       │   ├── GetByID()
-│       │   ├── ListByBenchmark()
-│       │   ├── Update()
-│       │   └── Delete()
-│       └── assertions.go            (Verificação de conformidade)
-│           └── var _ VarConfigRepository = (*Repository)(nil)
+│       │   ├── NewService(repository, logger, metrics)
+│       │   ├── Create(ctx, config)
+│       │   ├── GetByID(ctx, orgID, benchmarkID, id)
+│       │   ├── ListByBenchmark(ctx, orgID, benchmarkID)
+│       │   ├── Update(ctx, config)
+│       │   └── Delete(ctx, orgID, benchmarkID, id)
+│       ├── assertions.go            (Verificação de conformidade)
+│       │   └── var _ VarConfigUseCase = (*Service)(nil)
+│       ├── service_test.go          (Testes unitários)
+│       └── contract_test.go         (Testes de contrato do repositório)
 │
 └── 💾 CAMADA: Storage (DynamoDB)
     └── internal/storage/dynamodb/varconfig/
         ├── repository.go            (Implementação DynamoDB)
         │   ├── DynamoDBModel (PK+SK structure)
-        │   ├── NewRepository()
-        │   ├── Save() → PutItem
-        │   ├── FindByID() → GetItem
-        │   ├── FindAllByBenchmark() → Query
-        │   ├── Update() → UpdateItem
-        │   ├── Delete() → DeleteItem
-        │   ├── buildPK()
-        │   ├── buildSK()
+        │   ├── NewRepository(client, tableName)
+        │   ├── Save(ctx, config) → PutItem
+        │   ├── FindByID(ctx, orgID, benchmarkID, id) → GetItem
+        │   ├── FindAllByBenchmark(ctx, orgID, benchmarkID) → Query
+        │   ├── Update(ctx, config) → UpdateItem
+        │   ├── Delete(ctx, orgID, benchmarkID, id) → DeleteItem
+        │   ├── buildPK() e buildSK()
         │   └── fromModel()
         └── assertions.go            (Verificação de conformidade)
             └── var _ VarConfigRepository = (*Repository)(nil)
@@ -68,22 +92,27 @@ pkg/handler/varconfig/handler.go
   ├─ Valida params (orgId, benchmark_id, id)
   ├─ Faz bind do JSON body
   ├─ Chama ValidateCreateRequest()
-  └─ Monta VarConfig e chama service
+  ├─ Monta VarConfig e chama service
+  └─ Propaga context.Context
     ↓
 internal/service/domain/varconfig/service.go
   ├─ Valida regras de negócio
+  ├─ Registra métricas de latência
+  ├─ Loga operações (Debug/Info/Error)
   ├─ Define timestamps
-  └─ Chama repository
+  └─ Chama repository com context
     ↓
 internal/storage/dynamodb/varconfig/repository.go
   ├─ Constrói PK = "ORG#{orgId}#BENCH#{benchmark_id}"
   ├─ Constrói SK = "VARCONFIG#{id}"
   ├─ Executa operação DynamoDB otimizada
+  ├─ Registra métricas de storage
+  ├─ Loga operações DynamoDB
   └─ Retorna dados convertidos
     ↓
 HTTP Response (JSON)
 
-════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
 
 ROTAS DA API:
 
@@ -97,28 +126,33 @@ Específico
   PATCH  /org/{orgId}/compliance/variables/{benchmark_id}/{id}
   DELETE /org/{orgId}/compliance/variables/{benchmark_id}/{id}
 
-══════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
 
-OPERAÇÕES DYNAMODB:
+OPERAÇÕES DYNAMODB OTIMIZADAS:
 
 Create (Save)
   └─ PutItem com PK + SK
+  └─ Métrica: storage_varconfig_create_failures_total
 
 Read (FindByID)
   └─ GetItem com PK + SK
+  └─ Métrica: storage_varconfig_get_failures_total
 
 List (FindAllByBenchmark)
-  └─ Query com PK (sem Scan!)
+  └─ Query com PK (ZERO Scan!)
+  └─ Métrica: storage_varconfig_list_failures_total
 
 Update
   └─ UpdateItem com PK + SK
+  └─ Métrica: storage_varconfig_update_failures_total
 
 Delete
   └─ DeleteItem com PK + SK
+  └─ Métrica: storage_varconfig_delete_failures_total
 
-════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
 
-ESTRUTURA DE CHAVES:
+ESTRUTURA DE CHAVES OTIMIZADA:
 
 PK  = "ORG#{orgId}#BENCH#{benchmark_id}"
 SK  = "VARCONFIG#{id}"
@@ -127,4 +161,4 @@ Exemplo Real:
 PK  = "ORG#123#BENCH#pci-dss-v3.2.1"
 SK  = "VARCONFIG#1640995200000000000"
 
-════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
