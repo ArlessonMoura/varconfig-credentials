@@ -1,6 +1,8 @@
 package varconfig
 
 import (
+	"projeto-crud-credencials/internal/common/logger"
+	"projeto-crud-credencials/internal/common/metrics"
 	svcvarconfig "projeto-crud-credencials/internal/service/domain/varconfig"
 	storagevarconfig "projeto-crud-credencials/internal/storage/dynamodb/varconfig"
 
@@ -14,8 +16,10 @@ func InitHandler(client *dynamodb.Client, tableName string) *Handler {
 	// Instancia o repository (storage)
 	repositoryImpl := storagevarconfig.NewRepository(client, tableName)
 
-	// Instancia o service
-	serviceImpl := svcvarconfig.NewService(repositoryImpl)
+	// Instancia o service com logger e metrics
+	loggerImpl := logger.GetGlobalLogger()
+	metricsImpl := &metrics.DefaultCollector{}
+	serviceImpl := svcvarconfig.NewService(repositoryImpl, loggerImpl, metricsImpl)
 
 	// Retorna o handler com o service injetado
 	return NewHandler(serviceImpl)
