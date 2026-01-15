@@ -1,6 +1,7 @@
 package varconfig
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -25,13 +26,13 @@ func VarConfigRepositoryContract(t *testing.T, repo VarConfigRepository) {
 		}
 
 		// Act
-		saved, err := repo.Save(config)
+		saved, err := repo.Save(context.Background(), config)
 		if err != nil {
 			t.Fatalf("Save falhou: %v", err)
 		}
 
 		// Assert
-		found, err := repo.FindByID(orgID, benchmarkID, saved.ID)
+		found, err := repo.FindByID(context.Background(), orgID, benchmarkID, saved.ID)
 		if err != nil {
 			t.Fatalf("FindByID falhou: %v", err)
 		}
@@ -55,10 +56,10 @@ func VarConfigRepositoryContract(t *testing.T, repo VarConfigRepository) {
 		}
 
 		// Act
-		repo.Save(config1)
-		repo.Save(config2)
+		repo.Save(context.Background(), config1)
+		repo.Save(context.Background(), config2)
 
-		configs, err := repo.FindAllByBenchmark(orgID, benchmarkID)
+		configs, err := repo.FindAllByBenchmark(context.Background(), orgID, benchmarkID)
 		if err != nil {
 			t.Fatalf("FindAllByBenchmark falhou: %v", err)
 		}
@@ -76,11 +77,11 @@ func VarConfigRepositoryContract(t *testing.T, repo VarConfigRepository) {
 			BenchmarkID: benchmarkID,
 			Payload:     map[string]any{"version": 1},
 		}
-		saved, _ := repo.Save(config)
+		saved, _ := repo.Save(context.Background(), config)
 
 		// Act
 		saved.Payload = map[string]any{"version": 2}
-		updated, err := repo.Update(saved)
+		updated, err := repo.Update(context.Background(), saved)
 		if err != nil {
 			t.Fatalf("Update falhou: %v", err)
 		}
@@ -99,16 +100,16 @@ func VarConfigRepositoryContract(t *testing.T, repo VarConfigRepository) {
 			BenchmarkID: benchmarkID,
 			Payload:     map[string]any{"test": true},
 		}
-		saved, _ := repo.Save(config)
+		saved, _ := repo.Save(context.Background(), config)
 
 		// Act
-		err := repo.Delete(orgID, benchmarkID, saved.ID)
+		err := repo.Delete(context.Background(), orgID, benchmarkID, saved.ID)
 		if err != nil {
 			t.Fatalf("Delete falhou: %v", err)
 		}
 
 		// Assert
-		_, err = repo.FindByID(orgID, benchmarkID, saved.ID)
+		_, err = repo.FindByID(context.Background(), orgID, benchmarkID, saved.ID)
 		if err == nil {
 			t.Error("Config não foi deletado")
 		}
@@ -116,7 +117,7 @@ func VarConfigRepositoryContract(t *testing.T, repo VarConfigRepository) {
 
 	t.Run("Delete com ID inválido", func(t *testing.T) {
 		// Act
-		err := repo.Delete(orgID, benchmarkID, 99999)
+		err := repo.Delete(context.Background(), orgID, benchmarkID, 99999)
 
 		// Assert
 		if err == nil {
@@ -126,7 +127,7 @@ func VarConfigRepositoryContract(t *testing.T, repo VarConfigRepository) {
 
 	t.Run("FindByID com ID inválido", func(t *testing.T) {
 		// Act
-		_, err := repo.FindByID(orgID, benchmarkID, 99999)
+		_, err := repo.FindByID(context.Background(), orgID, benchmarkID, 99999)
 
 		// Assert
 		if err == nil {

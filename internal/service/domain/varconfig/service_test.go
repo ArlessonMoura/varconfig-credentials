@@ -1,6 +1,9 @@
 package varconfig
 
 import (
+	"context"
+	"projeto-crud-credencials/internal/common/logger"
+	"projeto-crud-credencials/internal/common/metrics"
 	"testing"
 )
 
@@ -11,7 +14,7 @@ func TestServiceCreate(t *testing.T) {
 		configs: make(map[string]VarConfig),
 	}
 
-	svc := NewService(mockRepo)
+	svc := NewService(mockRepo, &logger.DefaultLogger{}, &metrics.DefaultCollector{})
 
 	t.Run("Create com dados válidos", func(t *testing.T) {
 		config := VarConfig{
@@ -20,7 +23,7 @@ func TestServiceCreate(t *testing.T) {
 			Payload:     map[string]any{"key": "value"},
 		}
 
-		result, err := svc.Create(config)
+		result, err := svc.Create(context.Background(), config)
 		if err != nil {
 			t.Fatalf("Create falhou: %v", err)
 		}
@@ -37,7 +40,7 @@ func TestServiceCreate(t *testing.T) {
 			Payload:     map[string]any{},
 		}
 
-		_, err := svc.Create(config)
+		_, err := svc.Create(context.Background(), config)
 		if err == nil {
 			t.Error("Create deveria retornar erro para orgID = 0")
 		}
@@ -50,7 +53,7 @@ func TestServiceCreate(t *testing.T) {
 			Payload:     map[string]any{},
 		}
 
-		_, err := svc.Create(config)
+		_, err := svc.Create(context.Background(), config)
 		if err == nil {
 			t.Error("Create deveria retornar erro para benchmarkID vazio")
 		}
@@ -63,7 +66,7 @@ func TestServiceCreate(t *testing.T) {
 			Payload:     nil,
 		}
 
-		_, err := svc.Create(config)
+		_, err := svc.Create(context.Background(), config)
 		if err == nil {
 			t.Error("Create deveria retornar erro para payload nulo")
 		}
@@ -73,10 +76,10 @@ func TestServiceCreate(t *testing.T) {
 // TestServiceGetByID testa a busca de um VarConfig
 func TestServiceGetByID(t *testing.T) {
 	mockRepo := &mockRepository{}
-	svc := NewService(mockRepo)
+	svc := NewService(mockRepo, &logger.DefaultLogger{}, &metrics.DefaultCollector{})
 
 	t.Run("GetByID com parâmetros inválidos", func(t *testing.T) {
-		_, err := svc.GetByID(0, "test", 1)
+		_, err := svc.GetByID(context.Background(), 0, "test", 1)
 		if err == nil {
 			t.Error("GetByID deveria retornar erro para orgID = 0")
 		}
@@ -88,22 +91,22 @@ type mockRepository struct {
 	configs map[string]VarConfig
 }
 
-func (m *mockRepository) FindAllByBenchmark(orgID int64, benchmarkID string) ([]VarConfig, error) {
+func (m *mockRepository) FindAllByBenchmark(ctx context.Context, orgID int64, benchmarkID string) ([]VarConfig, error) {
 	return nil, nil
 }
 
-func (m *mockRepository) Save(config VarConfig) (VarConfig, error) {
+func (m *mockRepository) Save(ctx context.Context, config VarConfig) (VarConfig, error) {
 	return config, nil
 }
 
-func (m *mockRepository) FindByID(orgID int64, benchmarkID string, id int64) (VarConfig, error) {
+func (m *mockRepository) FindByID(ctx context.Context, orgID int64, benchmarkID string, id int64) (VarConfig, error) {
 	return VarConfig{}, nil
 }
 
-func (m *mockRepository) Update(config VarConfig) (VarConfig, error) {
+func (m *mockRepository) Update(ctx context.Context, config VarConfig) (VarConfig, error) {
 	return config, nil
 }
 
-func (m *mockRepository) Delete(orgID int64, benchmarkID string, id int64) error {
+func (m *mockRepository) Delete(ctx context.Context, orgID int64, benchmarkID string, id int64) error {
 	return nil
 }
