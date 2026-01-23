@@ -28,7 +28,7 @@ func Bootstrap() {
 	}
 
 	client := dynamodb.NewFromConfig(cfg)
-	
+
 	// O nome da tabela pode vir de uma variável de ambiente conforme boa prática
 	tableName := os.Getenv("DYNAMODB_TABLE_VARCONFIG")
 	if tableName == "" {

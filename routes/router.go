@@ -6,10 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
 func SetupRouter(h *varconfig.Handler) *gin.Engine {
-	router := gin.Default()	
-	SetupVarConfigRoutes(router, h)	
+	router := gin.Default()
+	SetupVarConfigRoutes(router, h)
 
 	return router
 }

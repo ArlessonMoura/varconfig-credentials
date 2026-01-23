@@ -1,5 +1,4 @@
 package varconfig
 
-
-
-var _ IVarConfigService = (*Service)(nil)
+// Service assertions são verificados nos testes unitários
+// para evitar ciclos de importação

@@ -8,13 +8,13 @@ import (
 
 // SetupVarConfigRoutes registra as rotas de VarConfig seguindo a especificação do projeto
 func SetupVarConfigRoutes(router *gin.Engine, h *varconfig.Handler) {
-	
+
 	// Agrupamento base para evitar repetição de prefixos
 	group := router.Group("/org/:orgId/compliance/variables/:benchmark_id")
 	{
 		// GET – Listar todos os varConfigs do benchmark
-		group.GET("", h.List) 
-		
+		group.GET("", h.List)
+
 		// POST – Criar um novo varConfig
 		group.POST("", h.Create)
 
@@ -23,11 +23,11 @@ func SetupVarConfigRoutes(router *gin.Engine, h *varconfig.Handler) {
 		{
 			// GET – Obter um varConfig específico
 			specific.GET("", h.GetByID)
-			
+
 			// PUT ou PATCH – Atualizar um varConfig
 			specific.PUT("", h.Update)
 			specific.PATCH("", h.Update)
-			
+
 			// DELETE – Remover um varConfig
 			specific.DELETE("", h.Delete)
 		}

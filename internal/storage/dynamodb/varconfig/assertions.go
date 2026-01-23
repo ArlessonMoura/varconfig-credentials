@@ -4,6 +4,5 @@ import (
 	svcvarconfig "projeto-crud-credencials/internal/service/domain/core/varconfig"
 )
 
-// assertions garante que Repository implementa a interface VarConfigRepository
-// Estou tentando entender melhor como isso funciona
+// assertions garante que Repository implementa a interface IVarConfigRepository
 var _ svcvarconfig.IVarConfigRepository = (*Repository)(nil)
