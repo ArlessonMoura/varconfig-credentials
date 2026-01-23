@@ -2,27 +2,66 @@
 
 API REST para gerenciamento de configurações de variáveis com armazenamento em **AWS DynamoDB**.
 
-## 🏗️ Arquitetura
+## 🏗️ Arquitetura Limpa
 
-- **Go 1.23** com **Gin** para HTTP
-- **AWS SDK v2** para DynamoDB
-- **Chave composta PK+SK** para performance otimizada
-- **Zero Scan operations** - apenas GetItem/Query
-- **Payload JSON flexível** sem validação de conteúdo
+Implementação seguindo **Clean Architecture** com separação rigorosa de responsabilidades:
+
+```
+Handler → Service → Storage
+   ↓         ↓         ↓
+HTTP      Negócio   DynamoDB
+```
+
+### 🎯 Camadas Implementadas
+
+#### **🚀 Common Infrastructure** (`internal/common/`)
+
+- **errors/**: Tratamento centralizado de erros estruturados
+- **logger/**: Logging com context propagation e níveis
+- **metrics/**: Métricas com padrão `service_<domain>_<operation>_latency_ms`
+
+#### **🌐 Handler Layer** (`pkg/handler/varconfig/`)
+
+- Tradução de protocolo HTTP
+- Validação sintática de entrada
+- Wiring de dependências
+- **SEM lógica de negócio**
+
+#### **🎯 Service Layer** (`internal/service/domain/varconfig/`)
+
+- Lógica de negócio completa
+- Validações de regras
+- Injeção de repository, logger, metrics
+- Context propagation
+
+#### **💾 Storage Layer** (`internal/storage/dynamodb/varconfig/`)
+
+- Implementação DynamoDB com PK+SK otimizado
+- **ZERO Scan operations** - apenas Query eficientes
+- Logging e métricas integradas
+- **SEM conhecimento de handlers/DTOs**
 
 ## 📋 Pré-requisitos
 
 - Go 1.23+
 - AWS CLI configurado
-- Tabela DynamoDB `VarConfigs` criada
+- Tabela DynamoDB `var_configs` criada
 
 ## 🚀 Configuração
 
 ### 1. Criar Tabela DynamoDB
 
+Use o script automatizado:
+
+```bash
+./setup-dynamodb.sh
+```
+
+Ou manualmente:
+
 ```bash
 aws dynamodb create-table \
-  --table-name VarConfigs \
+  --table-name var_configs \
   --attribute-definitions \
     AttributeName=PK,AttributeType=S \
     AttributeName=SK,AttributeType=S \
@@ -51,211 +90,173 @@ go mod download
 
 ```bash
 go run .
-# ou compilado
-go build -o varconfig-api && ./varconfig-api
 ```
 
-Servidor iniciado em `http://localhost:8080`
-
-## 📡 Endpoints da API
-
-### Coleção
-
-- **GET** `/org/{orgId}/compliance/variables/{benchmark_id}` — lista todos os VarConfigs do benchmark
-- **POST** `/org/{orgId}/compliance/variables/{benchmark_id}` — cria um VarConfig
-
-### Específico
-
-- **GET** `/org/{orgId}/compliance/variables/{benchmark_id}/{id}` — obtém um VarConfig
-- **PUT** `/org/{orgId}/compliance/variables/{benchmark_id}/{id}` — atualiza (completo)
-- **PATCH** `/org/{orgId}/compliance/variables/{benchmark_id}/{id}` — atualiza (parcial)
-- **DELETE** `/org/{orgId}/compliance/variables/{benchmark_id}/{id}` — remove
-
-## 💡 Exemplos de Uso
-
-### Criar VarConfig
-
-```bash
-curl -X POST "http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "payload": {
-      "max_login_attempts": 3,
-      "session_timeout": 1800,
-      "allowed_types": ["admin", "user"]
-    }
-  }'
-```
-
-### Listar VarConfigs
-
-```bash
-curl -X GET "http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1"
-```
-
-### Obter VarConfig Específico
-
-```bash
-curl -X GET "http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1/1640995200000000000"
-```
-
-### Atualizar VarConfig
-
-```bash
-curl -X PUT "http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1/1640995200000000000" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "payload": {
-      "max_login_attempts": 5,
-      "session_timeout": 3600
-    }
-  }'
-```
-
-### Deletar VarConfig
-
-```bash
-curl -X DELETE "http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1/1640995200000000000"
-```
+Servidor iniciará em `http://localhost:8080`
 
 ## 📊 Modelo de Dados
 
-### Domain Model
+### VarConfig (Domínio)
 
 ```go
 type VarConfig struct {
     ID          int64                  `json:"id"`
     OrgID       int64                  `json:"org_id"`
-    BenchmarkID string                 `json:"benchmark_id"`
-    Payload     map[string]interface{} `json:"payload"`
+    BenchmarkID string                  `json:"benchmark_id"`
+    Payload     map[string]interface{}   `json:"payload"`
     CreatedAt   time.Time              `json:"created_at"`
     UpdatedAt   time.Time              `json:"updated_at"`
 }
 ```
 
-### DynamoDB Schema
-
-```json
-{
-  "PK": "ORG#123#BENCH#pci-dss-v3.2.1",
-  "SK": "VARCONFIG#1640995200000000000",
-  "id": "1640995200000000000",
-  "org_id": "123",
-  "benchmark_id": "pci-dss-v3.2.1",
-  "payload": "{\"max_login_attempts\": 3}",
-  "created_at": "2024-01-01T12:00:00Z",
-  "updated_at": "2024-01-01T12:00:00Z"
-}
-```
-
-## ⚡ Performance
-
-### Operações Otimizadas
-
-| Operação | Método DynamoDB | Performance |
-|----------|-----------------|-------------|
-| Create   | PutItem         | O(1) |
-| Read     | GetItem         | O(1) |
-| List     | Query           | O(log N) |
-| Update   | UpdateItem      | O(1) |
-| Delete   | DeleteItem      | O(1) |
-
-### Estrutura de Chaves
+### Estrutura DynamoDB (PK+SK)
 
 ```
 PK  = "ORG#{orgId}#BENCH#{benchmark_id}"
 SK  = "VARCONFIG#{id}"
 ```
 
-**Benefícios:**
+**Exemplo Real:**
 
-- ✅ **Zero Scan** - apenas operações otimizadas
-- ✅ **Particionamento** por organização
-- ✅ **Escalabilidade** linear
-- ✅ **Custo otimizado** com pay-per-request
+```
+PK  = "ORG#123#BENCH#pci-dss-v3.2.1"
+SK  = "VARCONFIG#1640995200000000000"
+```
+
+## 🛤️ API Endpoints
+
+### Coleção
+
+```http
+GET    /org/{orgId}/compliance/variables/{benchmark_id}
+POST   /org/{orgId}/compliance/variables/{benchmark_id}
+```
+
+### Específico
+
+```http
+GET    /org/{orgId}/compliance/variables/{benchmark_id}/{id}
+PUT    /org/{orgId}/compliance/variables/{benchmark_id}/{id}
+PATCH  /org/{orgId}/compliance/variables/{benchmark_id}/{id}
+DELETE /org/{orgId}/compliance/variables/{benchmark_id}/{id}
+```
+
+## 📝 Exemplos de Uso
+
+### Criar VarConfig
+
+```bash
+curl -X POST http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payload": {
+      "max_memory": 1024,
+      "allowed_types": ["web", "api"],
+      "timeout": 30
+    }
+  }'
+```
+
+### Listar por Benchmark
+
+```bash
+curl http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1
+```
+
+### Buscar por ID
+
+```bash
+curl http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1/1640995200000000000
+```
+
+### Atualizar
+
+```bash
+curl -X PUT http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1/1640995200000000000 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payload": {
+      "max_memory": 2048,
+      "allowed_types": ["web", "api", "mobile"],
+      "timeout": 60
+    }
+  }'
+```
+
+### Deletar
+
+```bash
+curl -X DELETE http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1/1640995200000000000
+```
 
 ## 🧪 Testes
 
-### Testes Unitários
+### Unit Tests
 
 ```bash
-go test ./...
+go test ./internal/service/domain/varconfig/...
 ```
 
-### Testes de Integração
+### Integration Tests
 
 ```bash
-# Script completo de testes
-chmod +x test.sh
-./test.sh
+go test ./pkg/handler/varconfig/...
 ```
 
-## 📁 Estrutura do Projeto
+### Contract Tests
+
+```bash
+go test ./internal/service/domain/varconfig/... -run Contract
+```
+
+## 🔧 Estrutura do Projeto
 
 ```
 projeto-crud-credencials/
-├── 📚 docs/
-│   ├── README.md
-│   ├── DYNAMODB_SCHEMA.md
-│   └── STRUCTURE.txt
-├── 🎯 pkg/handler/varconfig/     # HTTP Layer
-├── 🔧 internal/service/domain/   # Business Logic
-├── 💾 internal/storage/dynamodb/ # DynamoDB Layer
-└── 🚀 main.go                    # Application Entry
+├── 📚 DOCUMENTAÇÃO
+│   ├── README.md                    # Este arquivo
+│   ├── DYNAMODB_SCHEMA.md           # Schema detalhado
+│   └── STRUCTURE.txt                # Arquitetura completa
+├── 🚀 internal/common/              # Infraestrutura compartilhada
+│   ├── errors/                    # Tratamento de erros
+│   ├── logger/                    # Logging centralizado
+│   └── metrics/                   # Métricas
+├── 🌐 pkg/handler/varconfig/       # Camada HTTP
+├── 🎯 internal/service/domain/      # Camada de negócio
+└── 💾 internal/storage/dynamodb/     # Camada de dados
 ```
 
-[Ver estrutura completa →](STRUCTURE.txt)
+## 🐛 Debug & Troubleshooting
 
-## 🔧 Configuração Avançada
-
-### Variáveis de Ambiente
+### Verificar Schema
 
 ```bash
-export TABLE_NAME=VarConfigs
-export PORT=8080
-export LOG_LEVEL=info
+./check-schema.sh
 ```
-
-### Configuração AWS
-
-```go
-// Custom endpoint para desenvolvimento
-cfg, err := config.LoadDefaultConfig(context.TODO(),
-    config.WithRegion("us-east-1"),
-    config.WithEndpointResolver(aws.EndpointResolverWithOptionsFunc(
-        func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-            return aws.Endpoint{URL: "http://localhost:8000"}, nil
-        },
-    )),
-)
-```
-
-## 🛡️ Segurança
-
-- **Validação de entrada** nos handlers
-- **Tratamento de erros** sem expor detalhes internos
-- **CORS** configurável para produção
-- **Rate limiting** recomendado via API Gateway
-
-## 📈 Monitoramento
 
 ### Logs Estruturados
 
-```go
-fmt.Printf("[%s] %s %s - %v\n", 
-    time.Now().Format("2006-01-02T15:04:05Z"),
-    c.Request.Method,
-    c.Request.URL.Path,
-    err,
-)
+A aplicação usa logging estruturado com diferentes níveis:
+
+```bash
+# Ver logs em tempo real
+go run . 2>&1 | grep -E "(ERROR|WARN)"
+
+# Logs detalhados com contexto
+export LOG_LEVEL=debug
+go run .
 ```
 
-### Métricas Sugeridas
+### Métricas
 
-- Latência por operação
-- Taxa de erro por endpoint
-- Consumo de capacidade DynamoDB
-- Contagem de requisições por organização
+As métricas são registradas automaticamente. Para implementação real:
+
+```go
+// Implementar Collector real em produção
+type PrometheusCollector struct {
+    // ... implementação Prometheus
+}
+```
 
 ## 🚀 Deploy
 
@@ -264,40 +265,49 @@ fmt.Printf("[%s] %s %s - %v\n",
 ```dockerfile
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-RUN go build -o varconfig-api
+RUN CGO_ENABLED=0 go build -o main .
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
-COPY --from=builder /app/varconfig-api .
+COPY --from=builder /app/main .
 EXPOSE 8080
-CMD ["./varconfig-api"]
+CMD ["./main"]
 ```
 
 ### AWS ECS/Fargate
 
 1. Build da imagem Docker
 2. Push para ECR
-3. Configurar task definition com IAM role para DynamoDB
-4. Deploy via ECS service
+3. Configurar task definition com:
+   - Environment variables para AWS credentials
+   - IAM Role com acesso DynamoDB
+   - Port mapping 8080
 
-## 📝 Licença
+### Variáveis de Ambiente
 
-MIT License - ver arquivo [LICENSE](LICENSE)
+```bash
+# Configuração
+AWS_REGION=us-east-1
+DYNAMODB_TABLE=varconfigs
+LOG_LEVEL=info
+PORT=8080
+```
 
-## 🤝 Contribuição
+## 🔐 Segurança
 
-1. Fork do projeto
-2. Feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit (`git commit -m 'Add amazing feature'`)
-4. Push (`git push origin feature/amazing-feature`)
-5. Pull Request
+- **IAM Least Privilege**: Role com acesso apenas à tabela `varconfigs`
+- **VPC Endpoints**: Acesso DynamoDB via VPC endpoints
+- **Encryption**: At-rest encryption habilitado
+- **TLS**: API servida com HTTPS em produção
 
----
+## 📈 Monitoramento
 
-## 📞 Suporte
+### Health Check
 
-- 📧 Email: <support@projeto-crud-credencials.com>
-- 📖 Docs: [DYNAMODB_SCHEMA.md](DYNAMODB_SCHEMA.md)
-- 🏗️ Arquitetura: [STRUCTURE.txt](STRUCTURE.txt)
+```bash
+curl http://localhost:8080/health
+```
