@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	repository "projeto-crud-credencials/internal/service"
 	"time"
 
 	"projeto-crud-credencials/dto"
@@ -18,10 +19,10 @@ var (
 )
 
 type Service struct {
-	repository IVarConfigRepository
+	repository repository.IVarConfigRepository
 }
 
-func NewService(repository IVarConfigRepository) *Service {
+func NewService(repository repository.IVarConfigRepository) *Service {
 	return &Service{
 		repository: repository,
 	}

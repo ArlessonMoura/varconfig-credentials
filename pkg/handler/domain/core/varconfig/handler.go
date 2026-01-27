@@ -3,15 +3,16 @@ package varconfig
 import (
 	"net/http"
 	"projeto-crud-credencials/dto"
+	service "projeto-crud-credencials/pkg/handler"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	service IVarConfigService
+	service service.IVarConfigService
 }
 
-func NewHandler(service IVarConfigService) *Handler {
+func NewHandler(service service.IVarConfigService) *Handler {
 	return &Handler{
 		service: service,
 	}
