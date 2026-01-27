@@ -1,8 +1,8 @@
 package varconfig
 
 import (
-	svcvarconfig "projeto-crud-credencials/internal/service/domain/core/varconfig"
+	repovarconfig "projeto-crud-credencials/internal/service"
 )
 
 // assertions garante que Repository implementa a interface IVarConfigRepository
-var _ svcvarconfig.IVarConfigRepository = (*Repository)(nil)
+var _ repovarconfig.IVarConfigRepository = (*Repository)(nil)
