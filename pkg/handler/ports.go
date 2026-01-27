@@ -1,4 +1,4 @@
-package varconfig
+package handler
 
 import (
 	"context"
