@@ -20,3 +20,26 @@ type IVarConfigRepository interface {
 	// Delete remove o item via chaves compostas
 	Delete(ctx context.Context, pk string, sk string) error
 }
+
+
+// ======================================
+
+
+// IBenchmarkSchemaService define a lógica interna de coordenação
+type IBenchmarkSchemaService interface {
+	RegisterSchema(ctx context.Context, name string, schemaBody map[string]any) (*models.BenchmarkSchemaRelational, error)
+}
+
+// IRelationalRepository lida com o banco SQL (Postgres/MySQL)
+type IRelationalRepository interface {
+	// Create agora recebe o modelo e retorna ele preenchido (com ID e Timestamps)
+	Create(ctx context.Context, schema *models.BenchmarkSchemaRelational) error
+	// Delete remove o registro em caso de falha no Dynamo (Rollback)
+	Delete(ctx context.Context, id int64) error
+}
+
+// INoSQLRepository lida com o DynamoDB
+type INoSQLRepository interface {
+	// Save agora recebe o modelo NoSQL completo
+	Save(ctx context.Context, item *models.BenchmarkSchemaNoSQL) error
+}
