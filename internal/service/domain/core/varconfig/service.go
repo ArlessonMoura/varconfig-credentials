@@ -8,7 +8,7 @@ import (
 	repository "projeto-crud-credencials/internal/service"
 	"time"
 
-	"projeto-crud-credencials/dto"
+	dto "projeto-crud-credencials/dto/varconfig_dto"
 	"projeto-crud-credencials/pkg/models"
 )
 

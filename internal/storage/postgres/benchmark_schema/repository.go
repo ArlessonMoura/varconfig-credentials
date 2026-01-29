@@ -1,6 +1,5 @@
 package benchmark_schema
 
-
 import (
 	"context"
 	"database/sql"

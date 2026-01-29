@@ -3,7 +3,7 @@ package varconfig
 import (
 	"fmt"
 
-	varconfigdto "projeto-crud-credencials/dto"
+	varconfigdto "projeto-crud-credencials/dto/varconfig_dto"
 )
 
 // ValidateCreateRequest valida a requisição de criar VarConfig

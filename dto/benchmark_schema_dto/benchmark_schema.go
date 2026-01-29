@@ -1,6 +1,6 @@
-package dto
+package benchmark_schema_dto
 
 type InternalRegisterSchemaRequest struct {
 	Name   string         `json:"name"`
-	Schema map[string]any `json:"schema"`
+	Schema map[string]string `json:"schema"`
 }
