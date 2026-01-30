@@ -22,6 +22,12 @@ func (h *Handler) List(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, ""); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Chamada ao service usando o contrato de DTO de resposta
 	result, err := h.service.List(c.Request.Context(), orgID, benchmarkID)
 	if err != nil {
@@ -63,6 +69,12 @@ func (h *Handler) GetByID(c *gin.Context) {
 	benchmarkID := c.Param("benchmark_id")
 	id := c.Param("id")
 
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	result, err := h.service.GetByID(c.Request.Context(), orgID, benchmarkID, id)
 	if err != nil {
 		// Em produção, aqui usaríamos o mapeamento de erros do internal/common
@@ -103,6 +115,12 @@ func (h *Handler) Delete(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 	id := c.Param("id")
+
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	if err := h.service.Delete(c.Request.Context(), orgID, benchmarkID, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
