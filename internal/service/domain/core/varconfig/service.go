@@ -8,8 +8,8 @@ import (
 	repository "projeto-crud-credencials/internal/service"
 	"time"
 
-	"projeto-crud-credencials/dto"
-	"projeto-crud-credencials/pkg/models"
+	dto "projeto-crud-credencials/dto/varconfig_dto"
+	models "projeto-crud-credencials/pkg/models/varconfig_models"
 )
 
 // Erros de domínio básicos

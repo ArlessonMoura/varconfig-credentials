@@ -2,7 +2,7 @@ package varconfig
 
 import (
 	"net/http"
-	"projeto-crud-credencials/dto"
+	dto "projeto-crud-credencials/dto/varconfig_dto"
 	service "projeto-crud-credencials/pkg/handler"
 
 	"github.com/gin-gonic/gin"
@@ -42,6 +42,12 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	// Validação adicional do payload
+	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// O Service recebe os IDs da URL + o Payload do Body
 	result, err := h.service.Create(c.Request.Context(), orgID, benchmarkID, req)
 	if err != nil {
@@ -74,6 +80,12 @@ func (h *Handler) Update(c *gin.Context) {
 
 	var req dto.UpdateVarConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validação adicional do payload
+	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
