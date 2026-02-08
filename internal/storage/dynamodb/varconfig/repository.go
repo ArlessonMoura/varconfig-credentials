@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"projeto-crud-credencials/pkg/models"
+	models "projeto-crud-credencials/pkg/models/varconfig_models"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"

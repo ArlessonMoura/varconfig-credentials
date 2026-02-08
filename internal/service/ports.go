@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"projeto-crud-credencials/pkg/models"
+	models "projeto-crud-credencials/pkg/models/varconfig_models"
 )
 
 // IVarConfigRepository define o contrato de persistência.

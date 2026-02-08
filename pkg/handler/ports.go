@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"projeto-crud-credencials/dto"
+	dto "projeto-crud-credencials/dto/varconfig_dto"
 )
 
 /*
