@@ -14,9 +14,8 @@ func (BenchmarkSchemaRelational) TableName() string {
 }
 
 type BenchmarkSchemaNoSQL struct {
-	PK         string         `dynamodbav:"PK"` 
-  SK         string         `dynamodbav:"SK"`
-	ID        string         `dynamodbav:"ID"`        // O ID vindo do Relacional (como string)
+	PK         string            `dynamodbav:"PK"` // SCHEMA#<id>
+	ID         string            `dynamodbav:"ID"` // O ID vindo do Relacional (como string)
 	SchemaBody map[string]string `dynamodbav:"schema_body"`
-	CreatedAt string         `dynamodbav:"created_at"`
+	CreatedAt  string            `dynamodbav:"created_at"`
 }

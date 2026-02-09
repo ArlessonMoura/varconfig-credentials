@@ -1,3 +1,4 @@
+// Package service provides domain services for the application.
 package service
 
 import (
@@ -22,19 +23,21 @@ type IVarConfigRepository interface {
 }
 
 
-// ======================================
+
+// -------------------------------------------------
 
 
-type IBenchmarkSchemaService interface {
-	RegisterSchema(ctx context.Context, name string, schemaBody map[string]any) (*models.BenchmarkSchemaRelational, error)
-}
-
+// IRelationalRepository define o contrato para persistência relacional (PostgreSQL)
 type IRelationalRepository interface {
 	Create(ctx context.Context, schema *models.BenchmarkSchemaRelational) error
 	// Delete remove o registro em caso de falha no Dynamo (Rollback)
 	Delete(ctx context.Context, id int64) error
 }
 
+// INoSQLRepository define o contrato para persistência NoSQL genérica
 type INoSQLRepository interface {
 	Save(ctx context.Context, item *models.BenchmarkSchemaNoSQL) error
+	Get(ctx context.Context, id string) (*models.BenchmarkSchemaNoSQL, error)
+	List(ctx context.Context) ([]models.BenchmarkSchemaNoSQL, error)
+	Delete(ctx context.Context, id string) error
 }

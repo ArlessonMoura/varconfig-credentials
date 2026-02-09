@@ -1,3 +1,4 @@
+// Package benchmark_schema provides services for managing benchmark schemas in both relational and NoSQL databases.
 package benchmark_schema
 
 import (
@@ -14,67 +15,118 @@ import (
 )
 
 var (
-ErrInvalidInput = errors.New("invalid input: name is required")
-ErrEmptySchema  = errors.New("schema cannot be empty")
+	ErrInvalidInput   = errors.New("invalid input: name is required")
+	ErrEmptySchema    = errors.New("schema cannot be empty")
+	ErrSchemaNotFound = errors.New("schema not found")
 )
 
 type Service struct {
-relationalRepo repository.IRelationalRepository
-nosqlRepo      repository.INoSQLRepository
+	relationalRepo repository.IRelationalRepository
+	nosqlRepo      repository.INoSQLRepository
+
 }
 
-func NewService(relRepo repository.IRelationalRepository, noSqlRepo repository.INoSQLRepository) *Service {
-return &Service{
-relationalRepo: relRepo,
-nosqlRepo:      noSqlRepo,
+func NewService(relRepo repository.IRelationalRepository, noSQLRepo repository.INoSQLRepository) *Service {
+	return &Service{
+		relationalRepo: relRepo,
+		nosqlRepo:      noSQLRepo,
+	}
 }
-}
-
-// RegisterSchema registra um novo schema de benchmark de forma atômica
-// 1. Insere o registro no banco relacional (PostgreSQL) e obtém o ID
-// 2. Armazena o corpo completo no DynamoDB usando o ID como chave
-// 3. Se o DynamoDB falhar, executa rollback do banco relacional (transação compensatória)
 
 func (s *Service) RegisterSchema(
-ctx context.Context,
-name string,
-schemaRequest *dto.InternalRegisterSchemaRequest,
-) (*models.BenchmarkSchemaRelational, error) {
-// Validações
-if name == "" {
-return nil, ErrInvalidInput
+	ctx context.Context,
+	name string,
+	schemaRequest *dto.InternalRegisterSchemaRequest,
+) (dto.RegisterSchemaResponse, error) {
+	// Validações
+	if name == "" {
+		return dto.RegisterSchemaResponse{}, ErrInvalidInput
+	}
+
+	if len(schemaRequest.Schema) == 0 {
+		return dto.RegisterSchemaResponse{}, ErrEmptySchema
+	}
+
+	// 1. Registrar no banco relacional (PostgreSQL)
+	relationalModel := &models.BenchmarkSchemaRelational{
+		Name: name,
+	}
+
+	if err := s.relationalRepo.Create(ctx, relationalModel); err != nil {
+		return dto.RegisterSchemaResponse{}, fmt.Errorf("failed to create benchmark schema in relational database: %w", err)
+	}
+
+	noSQLModel := &models.BenchmarkSchemaNoSQL{
+		ID:         strconv.FormatInt(relationalModel.ID, 10),
+		SchemaBody: convertSchemaBodyToStringMap(schemaRequest.Schema),
+		CreatedAt:  relationalModel.CreatedAt.Format(time.RFC3339),
+	}
+
+	if err := s.nosqlRepo.Save(ctx, noSQLModel); err != nil {
+		// 3. Rollback Compensatório: Deleta do SQL se o DynamoDB falhar
+		deleteErr := s.relationalRepo.Delete(ctx, relationalModel.ID)
+		if deleteErr != nil {
+			fmt.Printf("CRITICAL: Failed to rollback schema %d after DynamoDB failure: %v\n", relationalModel.ID, deleteErr)
+			return dto.RegisterSchemaResponse{}, fmt.Errorf("failed to save schema in DynamoDB and failed to rollback: %w, rollback error: %w", err, deleteErr)
+		}
+		return dto.RegisterSchemaResponse{}, fmt.Errorf("failed to save schema in NoSQL database, rolled back relational entry: %w", err)
+	}
+
+	return dto.RegisterSchemaResponse{
+		ID:        noSQLModel.ID,
+		Name:      relationalModel.Name,
+		CreatedAt: relationalModel.CreatedAt.Format(time.RFC3339),
+	}, nil
 }
 
-if len(schemaRequest.Schema) == 0 {
-return nil, ErrEmptySchema
+// GetSchemaByID recupera um schema específico pelo ID
+func (s *Service) GetSchemaByID(ctx context.Context, id string) (dto.BenchmarkSchemaResponse, error) {
+	if id == "" {
+		return dto.BenchmarkSchemaResponse{}, ErrSchemaNotFound
+	}
+
+	item, err := s.nosqlRepo.Get(ctx, id)
+	if err != nil {
+		return dto.BenchmarkSchemaResponse{}, fmt.Errorf("failed to get schema from repository: %w", err)
+	}
+
+	if item == nil {
+		return dto.BenchmarkSchemaResponse{}, ErrSchemaNotFound
+	}
+
+	return dto.BenchmarkSchemaResponse{
+		ID:         item.ID,
+		Name:       "", // Nome não está disponível no NoSQL, poderia buscar do relacional se necessário
+		SchemaBody: item.SchemaBody,
+		CreatedAt:  item.CreatedAt,
+	}, nil
 }
 
-// 1. Registrar no banco relacional (PostgreSQL)
-relationalModel := &models.BenchmarkSchemaRelational{
-Name: name,
-}
+// ListAllSchemas recupera todos os schemas disponíveis
+func (s *Service) ListAllSchemas(ctx context.Context) (dto.ListBenchmarkSchemasResponse, error) {
+	items, err := s.nosqlRepo.List(ctx)
+	if err != nil {
+		return dto.ListBenchmarkSchemasResponse{}, fmt.Errorf("failed to list schemas from repository: %w", err)
+	}
 
-if err := s.relationalRepo.Create(ctx, relationalModel); err != nil {
-return nil, fmt.Errorf("failed to create benchmark schema in relational database: %w", err)
-}
+	if items == nil {
+		return dto.ListBenchmarkSchemasResponse{Data: []dto.BenchmarkSchemaResponse{}, Count: 0}, nil
+	}
 
-noSqlModel := &models.BenchmarkSchemaNoSQL{
-ID:         strconv.FormatInt(relationalModel.ID, 10),
-SchemaBody: convertSchemaBodyToStringMap(schemaRequest.Schema),
-CreatedAt:  relationalModel.CreatedAt.Format(time.RFC3339),
-}
+	var data []dto.BenchmarkSchemaResponse
+	for _, item := range items {
+		data = append(data, dto.BenchmarkSchemaResponse{
+			ID:         item.ID,
+			Name:       "", // Nome não está disponível no NoSQL
+			SchemaBody: item.SchemaBody,
+			CreatedAt:  item.CreatedAt,
+		})
+	}
 
-if err := s.nosqlRepo.Save(ctx, noSqlModel); err != nil {
-// 3. Rollback Compensatório: Deleta do SQL se o DynamoDB falhar
-deleteErr := s.relationalRepo.Delete(ctx, relationalModel.ID)
-if deleteErr != nil {
-fmt.Printf("CRITICAL: Failed to rollback schema %d after DynamoDB failure: %v\n", relationalModel.ID, deleteErr)
-return nil, fmt.Errorf("failed to save schema in DynamoDB and failed to rollback: %w, rollback error: %w", err, deleteErr)
-}
-return nil, fmt.Errorf("failed to save schema in NoSQL database, rolled back relational entry: %w", err)
-}
-
-return relationalModel, nil
+	return dto.ListBenchmarkSchemasResponse{
+		Data:  data,
+		Count: len(data),
+	}, nil
 }
 
 func convertSchemaBodyToStringMap(schema map[string]dto.SchemaProperty) map[string]string {
