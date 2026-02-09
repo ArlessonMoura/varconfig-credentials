@@ -23,8 +23,8 @@ func NewRepository(client *dynamodb.Client, tableName string) *Repository {
 	}
 }
 
-// Gera PK a partir do ID do banco relacional
-func (r *Repository) Save(ctx context.Context, item models.BenchmarkSchemaNoSQL) error {
+// Save armazena o schema no DynamoDB usando o ID como chave de partição
+func (r *Repository) Save(ctx context.Context, item *models.BenchmarkSchemaNoSQL) error {
 	// Gerar PK e SK a partir do ID
 	pk := "SCHEMA#" + item.ID
 	sk := "SCHEMA#" + item.ID
