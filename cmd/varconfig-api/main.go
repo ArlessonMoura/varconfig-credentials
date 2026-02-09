@@ -30,12 +30,10 @@ func Bootstrap() {
 	
 	tableName := os.Getenv("DYNAMODB_TABLE_VARCONFIG")
 	if tableName == "" {
-		tableName = "VarConfigs"
+		log.Fatal("Erro: Variável de ambiente DYNAMODB_TABLE_VARCONFIG nao configurada")
 	}
-
 	
 	varConfigHandler := handlervarconfig.InitHandler(client, tableName)
-
 	
 	router := routes.SetupRouter(varConfigHandler)
 
