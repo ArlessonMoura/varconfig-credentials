@@ -1,4 +1,3 @@
-// Package benchmark_schema provides services for managing benchmark schemas in both relational and NoSQL databases.
 package benchmark_schema
 
 import (
@@ -79,8 +78,8 @@ func (s *Service) Create(
 	}, nil
 }
 
-// GetSchemaByID recupera um schema específico pelo ID
-func (s *Service) GeByID(ctx context.Context, id string) (dto.BenchmarkSchemaResponse, error) {
+// GetByID recupera um schema específico pelo ID
+func (s *Service) GetByID(ctx context.Context, id string) (dto.BenchmarkSchemaResponse, error) {
 	if id == "" {
 		return dto.BenchmarkSchemaResponse{}, ErrSchemaNotFound
 	}
@@ -102,7 +101,7 @@ func (s *Service) GeByID(ctx context.Context, id string) (dto.BenchmarkSchemaRes
 	}, nil
 }
 
-// ListAllSchemas recupera todos os schemas disponíveis
+// List recupera todos os schemas disponíveis
 func (s *Service) List(ctx context.Context) (dto.ListBenchmarkSchemasResponse, error) {
 	items, err := s.nosqlRepo.List(ctx)
 	if err != nil {
@@ -127,6 +126,90 @@ func (s *Service) List(ctx context.Context) (dto.ListBenchmarkSchemasResponse, e
 		Data:  data,
 		Count: len(data),
 	}, nil
+}
+
+
+//Implementação extra --
+// Update atualiza um schema existente usando dual-write
+func (s *Service) Update(ctx context.Context, id string, name string, schemaRequest *dto.InternalRegisterSchemaRequest) (dto.BenchmarkSchemaResponse, error) {
+	if id == "" || name == "" {
+		return dto.BenchmarkSchemaResponse{}, ErrInvalidInput
+	}
+
+	if len(schemaRequest.Schema) == 0 {
+		return dto.BenchmarkSchemaResponse{}, ErrEmptySchema
+	}
+
+	// 1. Buscar schema atual do NoSQL
+	existing, err := s.nosqlRepo.GetByID(ctx, id)
+	if err != nil {
+		return dto.BenchmarkSchemaResponse{}, fmt.Errorf("failed to get existing schema: %w", err)
+	}
+	if existing == nil {
+		return dto.BenchmarkSchemaResponse{}, ErrSchemaNotFound
+	}
+
+	// 2. Atualizar NoSQL com novo schema
+	updatedNoSQL := &models.BenchmarkSchemaNoSQL{
+		ID:         id,
+		SchemaBody: convertSchemaBodyToStringMap(schemaRequest.Schema),
+		CreatedAt:  existing.CreatedAt, // Mantém created_at original
+	}
+
+	if err := s.nosqlRepo.Update(ctx, updatedNoSQL); err != nil {
+		return dto.BenchmarkSchemaResponse{}, fmt.Errorf("failed to update schema in NoSQL database: %w", err)
+	}
+
+	// 3. Atualizar nome no banco relacional (se necessário)
+	// Nota: Esta implementação assume que só o schema body muda, não o nome
+	// Se o nome também precisar ser atualizado, precisaríamos de um método Update no relacional repo
+
+	return dto.BenchmarkSchemaResponse{
+		ID:         updatedNoSQL.ID,
+		Name:       name, // Nome passado como parâmetro
+		SchemaBody: updatedNoSQL.SchemaBody,
+		CreatedAt:  updatedNoSQL.CreatedAt,
+	}, nil
+}
+
+// Delete remove um schema usando dual-write
+func (s *Service) Delete(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrSchemaNotFound
+	}
+
+	// 1. Verificar se schema existe no NoSQL
+	existing, err := s.nosqlRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to check schema existence: %w", err)
+	}
+	if existing == nil {
+		return ErrSchemaNotFound
+	}
+
+	// 2. Converter ID para int64 para o relacional
+	relationalID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid schema ID format: %w", err)
+	}
+
+	// 3. Remover do NoSQL
+	if err := s.nosqlRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete schema from NoSQL database: %w", err)
+	}
+
+	// 4. Remover do relacional
+	if err := s.relationalRepo.Delete(ctx, relationalID); err != nil {
+		// Rollback compensatório: tentar recriar no NoSQL se falhar a deleção no relacional
+		rollbackErr := s.nosqlRepo.Create(ctx, existing)
+		if rollbackErr != nil {
+			fmt.Printf("CRITICAL: Failed to rollback schema %s after relational delete failure: %v\n", id, rollbackErr)
+			return fmt.Errorf("failed to delete from relational database and failed to rollback: %w, rollback error: %w", err, rollbackErr)
+		}
+		return fmt.Errorf("failed to delete from relational database, rolled back NoSQL entry: %w", err)
+	}
+
+	return nil
 }
 
 func convertSchemaBodyToStringMap(schema map[string]dto.SchemaProperty) map[string]string {

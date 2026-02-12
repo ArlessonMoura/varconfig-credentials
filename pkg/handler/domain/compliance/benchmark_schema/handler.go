@@ -1,4 +1,3 @@
-// Package benchmark_schema provides HTTP handlers for managing benchmark schemas.
 package benchmark_schema
 
 import (
@@ -25,7 +24,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		return
 	}
 
-	schema, err := h.svc.GetSchemaByID(c.Request.Context(), benchmarkID)
+	schema, err := h.svc.GetByID(c.Request.Context(), benchmarkID)
 	if err != nil {
 		// if errors.Is(err, errors.New("schema not found")) {
 		// 	c.JSON(http.StatusNotFound, gin.H{
@@ -47,7 +46,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 // List retorna todos os schemas disponíveis
 func (h *Handler) List(c *gin.Context) {
-	schemas, err := h.svc.ListAllSchemas(c.Request.Context())
+	schemas, err := h.svc.List(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal server error",

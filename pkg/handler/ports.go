@@ -29,5 +29,10 @@ type IBenchmarkSchemaService interface {
 	//READ
 	GetByID(ctx context.Context, id string) (dtoSchema.BenchmarkSchemaResponse, error)	
 	List(ctx context.Context) (dtoSchema.ListBenchmarkSchemasResponse, error)
-	//TODO: UPDATE e DELETE
+	// Abaixo, ambos são implementações extra --
+	//UPDATE
+	Update(ctx context.Context, id string, name string, schemaRequest *dtoSchema.InternalRegisterSchemaRequest) (dtoSchema.BenchmarkSchemaResponse, error)
+	
+	//DELETE
+	Delete(ctx context.Context, id string) error
 }

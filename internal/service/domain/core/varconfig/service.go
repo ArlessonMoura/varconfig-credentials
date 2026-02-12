@@ -1,4 +1,3 @@
-// internal/service/domain/core/varconfig/service.go - CORRIGIDO
 package varconfig
 
 import (
@@ -78,7 +77,7 @@ func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (d
 	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
 	sk := fmt.Sprintf("VARCONFIG#%s", id)
 
-	item, err := s.repository.GetByID(ctx, pk)
+	item, err := s.repository.GetByID(ctx, pk, sk)
 	if err != nil {
 		return dto.VarConfigResponse{}, fmt.Errorf("repository error: %w", err)
 	}
@@ -94,7 +93,7 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
 	sk := fmt.Sprintf("VARCONFIG#%s", id)
 
-	existing, err := s.repository.GetByID(ctx, pk)
+	existing, err := s.repository.GetByID(ctx, pk, sk)
 	if err != nil {
 		return dto.VarConfigResponse{}, fmt.Errorf("repository error: %w", err)
 	}

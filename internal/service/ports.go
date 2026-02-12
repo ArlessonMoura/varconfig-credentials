@@ -1,4 +1,3 @@
-// Package service provides domain services for the application.
 package service
 
 import (
@@ -13,13 +12,12 @@ type IVarConfigRepository interface {
 	// CREATE (PutItem do DynamoDB)
 	Create(ctx context.Context, item varConfigModels.VarConfigItem) error
 
-
 	//TODO: observar se a List esta sendo usada corretamente para listar todos os items
 	List(ctx context.Context, pk string) ([]varConfigModels.VarConfigItem, error)
-	// Na verdade lista pela PK e SK
-	GetByID(ctx context.Context, pk string) ([]varConfigModels.VarConfigItem, error)
+	// GetByID busca um item específico pela PK e SK
+	GetByID(ctx context.Context, pk string, sk string) (*varConfigModels.VarConfigItem, error)
 
-	// CREATE (PutItem do DynamoDB)
+	// UPDATE (PutItem do DynamoDB)
 	Update(ctx context.Context, item varConfigModels.VarConfigItem) error
 
 	// Delete remove o item via chaves compostas
@@ -45,6 +43,6 @@ type INoSQLRepository interface {
 	//Na verdade lista pelo PK
 	GetByID(ctx context.Context, id string) (*benchmarkModels.BenchmarkSchemaNoSQL, error)
 	List(ctx context.Context) ([]benchmarkModels.BenchmarkSchemaNoSQL, error)
-	//TODO: UPDATE
+	Update(ctx context.Context, item *benchmarkModels.BenchmarkSchemaNoSQL) error
 	Delete(ctx context.Context, id string) error
 }
