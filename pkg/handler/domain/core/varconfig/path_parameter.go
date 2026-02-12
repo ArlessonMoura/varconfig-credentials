@@ -1,3 +1,5 @@
+//USAR O MÉTODO VALIDATE!!!
+
 package varconfig
 
 import (

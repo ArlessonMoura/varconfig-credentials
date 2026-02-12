@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	dto "projeto-crud-credencials/dto/benchmark_schema_dto"
+	dto "projeto-crud-credencials/dto/benchmark_schema"
 	repository "projeto-crud-credencials/internal/service"
-	"projeto-crud-credencials/pkg/models"
+	models "projeto-crud-credencials/pkg/models/benchmark_schema"
 )
 
 var (
@@ -33,7 +33,7 @@ func NewService(relRepo repository.IRelationalRepository, noSQLRepo repository.I
 	}
 }
 
-func (s *Service) RegisterSchema(
+func (s *Service) Create(
 	ctx context.Context,
 	name string,
 	schemaRequest *dto.InternalRegisterSchemaRequest,
@@ -62,7 +62,7 @@ func (s *Service) RegisterSchema(
 		CreatedAt:  relationalModel.CreatedAt.Format(time.RFC3339),
 	}
 
-	if err := s.nosqlRepo.Save(ctx, noSQLModel); err != nil {
+	if err := s.nosqlRepo.Create(ctx, noSQLModel); err != nil {
 		// 3. Rollback Compensatório: Deleta do SQL se o DynamoDB falhar
 		deleteErr := s.relationalRepo.Delete(ctx, relationalModel.ID)
 		if deleteErr != nil {
@@ -80,12 +80,12 @@ func (s *Service) RegisterSchema(
 }
 
 // GetSchemaByID recupera um schema específico pelo ID
-func (s *Service) GetSchemaByID(ctx context.Context, id string) (dto.BenchmarkSchemaResponse, error) {
+func (s *Service) GeByID(ctx context.Context, id string) (dto.BenchmarkSchemaResponse, error) {
 	if id == "" {
 		return dto.BenchmarkSchemaResponse{}, ErrSchemaNotFound
 	}
 
-	item, err := s.nosqlRepo.Get(ctx, id)
+	item, err := s.nosqlRepo.GetByID(ctx, id)
 	if err != nil {
 		return dto.BenchmarkSchemaResponse{}, fmt.Errorf("failed to get schema from repository: %w", err)
 	}
@@ -103,7 +103,7 @@ func (s *Service) GetSchemaByID(ctx context.Context, id string) (dto.BenchmarkSc
 }
 
 // ListAllSchemas recupera todos os schemas disponíveis
-func (s *Service) ListAllSchemas(ctx context.Context) (dto.ListBenchmarkSchemasResponse, error) {
+func (s *Service) List(ctx context.Context) (dto.ListBenchmarkSchemasResponse, error) {
 	items, err := s.nosqlRepo.List(ctx)
 	if err != nil {
 		return dto.ListBenchmarkSchemasResponse{}, fmt.Errorf("failed to list schemas from repository: %w", err)

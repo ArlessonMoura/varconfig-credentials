@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"projeto-crud-credencials/pkg/models"
+	models "projeto-crud-credencials/pkg/models/benchmark_schema"
 )
 
 type Repository struct {

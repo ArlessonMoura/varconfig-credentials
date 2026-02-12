@@ -1,4 +1,4 @@
-// Package benchmark_schema provides parameter validation functions for benchmark schema handlers.
+//USAR MÉTODO VALIDATE!!!!!!
 package benchmark_schema
 
 import (

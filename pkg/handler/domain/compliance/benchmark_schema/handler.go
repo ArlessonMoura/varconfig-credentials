@@ -2,20 +2,19 @@
 package benchmark_schema
 
 import (
-	"errors"
 	"net/http"
-	service "projeto-crud-credencials/pkg/handler"
+	ports "projeto-crud-credencials/pkg/handler"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	retrievalService service.IBenchmarkSchemaService
+	svc ports.IBenchmarkSchemaService
 }
 
-func NewHandler(retrievalService service.IBenchmarkSchemaService) *Handler {
+func NewHandler(svc ports.IBenchmarkSchemaService) *Handler {
 	return &Handler{
-		retrievalService: retrievalService,
+		svc: svc,
 	}
 }
 
@@ -26,15 +25,15 @@ func (h *Handler) GetByID(c *gin.Context) {
 		return
 	}
 
-	schema, err := h.retrievalService.GetSchemaByID(c.Request.Context(), benchmarkID)
+	schema, err := h.svc.GetSchemaByID(c.Request.Context(), benchmarkID)
 	if err != nil {
-		if errors.Is(err, errors.New("schema not found")) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   "Schema not found",
-				"details": "No benchmark schema found with the provided ID",
-			})
-			return
-		}
+		// if errors.Is(err, errors.New("schema not found")) {
+		// 	c.JSON(http.StatusNotFound, gin.H{
+		// 		"error":   "Schema not found",
+		// 		"details": "No benchmark schema found with the provided ID",
+		// 	})
+		// 	return
+		// }
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal server error",
@@ -48,7 +47,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 // List retorna todos os schemas disponíveis
 func (h *Handler) List(c *gin.Context) {
-	schemas, err := h.retrievalService.ListAllSchemas(c.Request.Context())
+	schemas, err := h.svc.ListAllSchemas(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal server error",
