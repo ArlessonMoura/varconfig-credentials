@@ -22,6 +22,12 @@ func (h *Handler) List(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, ""); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Chamada ao service usando o contrato de DTO de resposta
 	result, err := h.service.List(c.Request.Context(), orgID, benchmarkID)
 	if err != nil {
@@ -42,6 +48,12 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	// Validação adicional do payload
+	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// O Service recebe os IDs da URL + o Payload do Body
 	result, err := h.service.Create(c.Request.Context(), orgID, benchmarkID, req)
 	if err != nil {
@@ -56,6 +68,12 @@ func (h *Handler) GetByID(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 	id := c.Param("id")
+
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	result, err := h.service.GetByID(c.Request.Context(), orgID, benchmarkID, id)
 	if err != nil {
@@ -78,6 +96,12 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	// Validação adicional do payload
+	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	result, err := h.service.Update(c.Request.Context(), orgID, benchmarkID, id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -91,6 +115,12 @@ func (h *Handler) Delete(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 	id := c.Param("id")
+
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	if err := h.service.Delete(c.Request.Context(), orgID, benchmarkID, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

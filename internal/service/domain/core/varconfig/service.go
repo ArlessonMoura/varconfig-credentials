@@ -9,7 +9,7 @@ import (
 	"time"
 
 	dto "projeto-crud-credencials/dto/varconfig_dto"
-	"projeto-crud-credencials/pkg/models"
+	models "projeto-crud-credencials/pkg/models/varconfig_models"
 )
 
 // Erros de domínio básicos
