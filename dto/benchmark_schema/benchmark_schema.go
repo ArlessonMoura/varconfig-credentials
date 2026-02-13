@@ -1,4 +1,4 @@
-package benchmark_schema_dto
+package benchmark_schema
 
 type ValidSchemaType string
 
