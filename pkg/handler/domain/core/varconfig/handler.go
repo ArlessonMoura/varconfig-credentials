@@ -23,6 +23,8 @@ func (h *Handler) Create(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 
+	// Validação dos parâmetros de rota
+	if err := ValidatePathParams(orgID, benchmarkID, ""); err != nil {
 	var req dto.CreateVarConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido: " + err.Error()})
@@ -35,6 +37,8 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	// Chamada ao service usando o contrato de DTO de resposta
+	result, err := h.service.List(c.Request.Context(), orgID, benchmarkID)
 	// O Service recebe os IDs da URL + o Payload do Body
 	result, err := h.svc.Create(c.Request.Context(), orgID, benchmarkID, req)
 	if err != nil {
@@ -56,6 +60,14 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
+	// Validação adicional do payload
+	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// O Service recebe os IDs da URL + o Payload do Body
+	result, err := h.service.Create(c.Request.Context(), orgID, benchmarkID, req)
 	// Chamada ao svc usando o contrato de DTO de resposta
 	result, err := h.svc.List(c.Request.Context(), orgID, benchmarkID)
 	if err != nil {
@@ -79,6 +91,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		return
 	}
 
+	result, err := h.service.GetByID(c.Request.Context(), orgID, benchmarkID, id)
 	result, err := h.svc.GetByID(c.Request.Context(), orgID, benchmarkID, id)
 	if err != nil {
 		// Em produção, aqui usaríamos o mapeamento de erros do internal/common
@@ -106,6 +119,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	result, err := h.service.Update(c.Request.Context(), orgID, benchmarkID, id, req)
 	result, err := h.svc.Update(c.Request.Context(), orgID, benchmarkID, id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -126,6 +140,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
+	if err := h.service.Delete(c.Request.Context(), orgID, benchmarkID, id); err != nil {
 	if err := h.svc.Delete(c.Request.Context(), orgID, benchmarkID, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
