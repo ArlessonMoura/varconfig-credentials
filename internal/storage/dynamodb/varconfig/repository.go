@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	models "projeto-crud-credencials/pkg/models/varconfig_models"
+	models "projeto-crud-credencials/pkg/models/varconfig"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -26,8 +26,8 @@ func NewRepository(client *dynamodb.Client, tableName string) *Repository {
 	}
 }
 
-// Save persiste ou atualiza um VarConfigItem (PutItem)
-func (r *Repository) Save(ctx context.Context, item models.VarConfigItem) error {
+// Create persiste um VarConfigItem (PutItem)
+func (r *Repository) Create(ctx context.Context, item models.VarConfigItem) error {
 	// O marshalMap transforma o struct models.VarConfigItem em um map[string]types.AttributeValue
 	// Isso respeita as tags `dynamodbav` que definimos no model
 	av, err := attributevalue.MarshalMap(item)
@@ -47,8 +47,33 @@ func (r *Repository) Save(ctx context.Context, item models.VarConfigItem) error 
 	return nil
 }
 
-// Get busca um item específico pela PK e SK
-func (r *Repository) Get(ctx context.Context, pk string, sk string) (*models.VarConfigItem, error) {
+// List busca todos os itens de uma partição (Benchmark)
+func (r *Repository) List(ctx context.Context, pk string) ([]models.VarConfigItem, error) {
+	input := &dynamodb.QueryInput{
+		TableName:              aws.String(r.tableName),
+		KeyConditionExpression: aws.String("PK = :pk"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pk": &types.AttributeValueMemberS{Value: pk},
+		},
+	}
+
+	result, err := r.client.Query(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query dynamodb: %w", err)
+	}
+
+	var items []models.VarConfigItem
+	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal query results: %w", err)
+	}
+
+	return items, nil
+}
+
+
+// GetByID busca um item específico pela PK e SK
+func (r *Repository) GetByID(ctx context.Context, pk string, sk string) (*models.VarConfigItem, error) {
 	key, err := attributevalue.MarshalMap(map[string]string{
 		"PK": pk,
 		"SK": sk,
@@ -79,28 +104,23 @@ func (r *Repository) Get(ctx context.Context, pk string, sk string) (*models.Var
 	return &item, nil
 }
 
-// ListByPK busca todos os itens de uma partição (Benchmark)
-func (r *Repository) ListByPK(ctx context.Context, pk string) ([]models.VarConfigItem, error) {
-	input := &dynamodb.QueryInput{
-		TableName:              aws.String(r.tableName),
-		KeyConditionExpression: aws.String("PK = :pk"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":pk": &types.AttributeValueMemberS{Value: pk},
-		},
-	}
-
-	result, err := r.client.Query(ctx, input)
+// Update atualiza um item existente via chaves compostas
+func (r *Repository) Update(ctx context.Context, item models.VarConfigItem) error {
+	av, err := attributevalue.MarshalMap(item)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query dynamodb: %w", err)
+		return fmt.Errorf("failed to marshal item for update: %w", err)
 	}
 
-	var items []models.VarConfigItem
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
+	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(r.tableName),
+		Item:      av,
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal query results: %w", err)
+		return fmt.Errorf("failed to update item in dynamodb: %w", err)
 	}
 
-	return items, nil
+	return nil
 }
 
 // Delete remove um item via chaves compostas
