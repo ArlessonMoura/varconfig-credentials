@@ -23,7 +23,6 @@ func ValidateCreateAndUpdateRequest(req *PathParameter) error {
 	return nil
 }
 
-
 // ValidatePathParams validates path parameters for VarConfig operations
 func ValidatePathParams(orgID, benchmarkID, id string) error {
 	if strings.TrimSpace(orgID) == "" {
@@ -42,5 +41,4 @@ func ValidatePathParams(orgID, benchmarkID, id string) error {
 	}
 
 	return nil
-}
 }
