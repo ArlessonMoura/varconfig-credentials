@@ -1,22 +1,27 @@
+// Package varconfig provides data transfer objects for variable configuration operations.
 package varconfig
 
-type CreateVarConfigRequest struct {
+// VarConfigCreationPayload represents the data required to create a new variable configuration
+type VarConfigCreationPayload struct {
 	Payload map[string]any `json:"payload" binding:"required"`
 }
 
-type UpdateVarConfigRequest struct {
+// VarConfigUpdatePayload represents the data required to update an existing variable configuration
+type VarConfigUpdatePayload struct {
 	Payload map[string]any `json:"payload" binding:"required"`
 }
 
-type VarConfigResponse struct {
-	ID          string         `json:"id"`           // Alterado para string (SK)
-	OrgID       string         `json:"org_id"`       // Alterado para string (PK)
-	BenchmarkID string         `json:"benchmark_id"` // Parte da PK
-	Payload     map[string]any `json:"payload"`
-	CreatedAt   string         `json:"created_at"`
-	UpdatedAt   string         `json:"updated_at"`
+// VarConfigData represents the complete variable configuration data returned from API
+type VarConfigData struct {
+	ID          string         `json:"id"`           // Unique identifier (SK)
+	OrgID       string         `json:"org_id"`       // Organization identifier (PK)
+	BenchmarkID string         `json:"benchmark_id"` // Benchmark identifier (part of PK)
+	Payload     map[string]any `json:"payload"`     // Configuration data
+	CreatedAt   string         `json:"created_at"`   // Creation timestamp
+	UpdatedAt   string         `json:"updated_at"`   // Last update timestamp
 }
 
-type ListVarConfigResponse struct {
-	Data []VarConfigResponse `json:"data"`
+// VarConfigCollectionResponse represents a collection of variable configurations
+type VarConfigCollectionResponse struct {
+	Data []VarConfigData `json:"data"`
 }

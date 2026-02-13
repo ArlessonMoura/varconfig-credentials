@@ -11,6 +11,7 @@ import (
 	models "projeto-crud-credencials/pkg/models/varconfig"
 )
 
+// Package varconfig provides domain services for managing variable configurations.
 // Erros de domínio básicos
 var (
 	ErrNotFound     = errors.New("varconfig not found")
@@ -28,9 +29,9 @@ func NewService(repository ports.IVarConfigRepository) *Service {
 }
 
 // Create cria um novo VarConfig gerando PK e SK com ID em nanosegundos
-func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input dto.CreateVarConfigRequest) (dto.VarConfigResponse, error) {
+func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input dto.VarConfigCreationPayload) (dto.VarConfigData, error) {
 	if orgID == "" || benchmarkID == "" {
-		return dto.VarConfigResponse{}, ErrInvalidInput
+		return dto.VarConfigData{}, ErrInvalidInput
 	}
 
 	// ID em nanosegundos (Unix nano timestamp)
@@ -49,63 +50,63 @@ func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, 
 	}
 
 	if err := s.repository.Create(ctx, item); err != nil {
-		return dto.VarConfigResponse{}, fmt.Errorf("storage error: %w", err)
+		return dto.VarConfigData{}, fmt.Errorf("storage error: %w", err)
 	}
 
 	return s.mapItemToResponse(item), nil
 }
 
 // List retorna todas as configurações de um benchmark
-func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (dto.ListVarConfigResponse, error) {
+func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (dto.VarConfigCollectionResponse, error) {
 	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
 
 	items, err := s.repository.List(ctx, pk)
 	if err != nil {
-		return dto.ListVarConfigResponse{}, fmt.Errorf("repository error: %w", err)
+		return dto.VarConfigCollectionResponse{}, fmt.Errorf("repository error: %w", err)
 	}
 
-	var data []dto.VarConfigResponse
+	var data []dto.VarConfigData
 	for _, item := range items {
 		data = append(data, s.mapItemToResponse(item))
 	}
 
-	return dto.ListVarConfigResponse{Data: data}, nil
+	return dto.VarConfigCollectionResponse{Data: data}, nil
 }
 
 // GetByID busca um item específico usando PK e SK
-func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (dto.VarConfigResponse, error) {
+func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (dto.VarConfigData, error) {
 	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
 	sk := fmt.Sprintf("VARCONFIG#%s", id)
 
 	item, err := s.repository.GetByID(ctx, pk, sk)
 	if err != nil {
-		return dto.VarConfigResponse{}, fmt.Errorf("repository error: %w", err)
+		return dto.VarConfigData{}, fmt.Errorf("repository error: %w", err)
 	}
 	if item == nil {
-		return dto.VarConfigResponse{}, ErrNotFound
+		return dto.VarConfigData{}, ErrNotFound
 	}
 
 	return s.mapItemToResponse(*item), nil
 }
 
 // Update atualiza o payload
-func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input dto.UpdateVarConfigRequest) (dto.VarConfigResponse, error) {
+func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input dto.VarConfigUpdatePayload) (dto.VarConfigData, error) {
 	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
 	sk := fmt.Sprintf("VARCONFIG#%s", id)
 
 	existing, err := s.repository.GetByID(ctx, pk, sk)
 	if err != nil {
-		return dto.VarConfigResponse{}, fmt.Errorf("repository error: %w", err)
+		return dto.VarConfigData{}, fmt.Errorf("repository error: %w", err)
 	}
 	if existing == nil {
-		return dto.VarConfigResponse{}, ErrNotFound
+		return dto.VarConfigData{}, ErrNotFound
 	}
 
 	existing.Payload = input.Payload
 	existing.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	if err := s.repository.Update(ctx, *existing); err != nil {
-		return dto.VarConfigResponse{}, fmt.Errorf("update error: %w", err)
+		return dto.VarConfigData{}, fmt.Errorf("update error: %w", err)
 	}
 
 	return s.mapItemToResponse(*existing), nil
@@ -119,8 +120,8 @@ func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) err
 	return s.repository.Delete(ctx, pk, sk)
 }
 
-func (s *Service) mapItemToResponse(item models.VarConfigItem) dto.VarConfigResponse {
-	return dto.VarConfigResponse{
+func (s *Service) mapItemToResponse(item models.VarConfigItem) dto.VarConfigData {
+	return dto.VarConfigData{
 		ID:          item.ID,
 		OrgID:       item.OrgID,
 		BenchmarkID: item.BenchmarkID,

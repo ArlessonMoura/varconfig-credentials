@@ -23,7 +23,7 @@ func (h *Handler) Create(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 
-	var req dto.CreateVarConfigRequest
+	var req dto.VarConfigCreationPayload
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido: " + err.Error()})
 		return
@@ -94,7 +94,7 @@ func (h *Handler) Update(c *gin.Context) {
 	benchmarkID := c.Param("benchmark_id")
 	id := c.Param("id")
 
-	var req dto.UpdateVarConfigRequest
+	var req dto.VarConfigUpdatePayload
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
