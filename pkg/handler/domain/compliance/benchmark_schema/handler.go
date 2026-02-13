@@ -19,8 +19,17 @@ func NewHandler(svc ports.IBenchmarkSchemaService) *Handler {
 
 // GetByID retorna um schema específico pelo benchmarkId
 func (h *Handler) GetByID(c *gin.Context) {
-	benchmarkID, isValid := ValidateBenchmarkID(c)
-	if !isValid {
+	benchmarkID := c.Param("benchmarkId")
+	
+	// Validação usando o novo método Validate
+	pathParam := &PathParameter{
+		BenchmarkID: benchmarkID,
+	}
+	if err := pathParam.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Bad request",
+			"details": err.Error(),
+		})
 		return
 	}
 

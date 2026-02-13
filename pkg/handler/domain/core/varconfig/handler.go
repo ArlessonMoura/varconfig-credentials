@@ -30,7 +30,12 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	// Validação adicional do payload
-	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
+	pathParam := &PathParameter{
+		Payload:     req.Payload,
+		OrgID:       orgID,
+		BenchmarkID: benchmarkID,
+	}
+	if err := pathParam.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -51,7 +56,11 @@ func (h *Handler) List(c *gin.Context) {
 	benchmarkID := c.Param("benchmark_id")
 
 	// Validação dos parâmetros de rota
-	if err := ValidatePathParams(orgID, benchmarkID, ""); err != nil {
+	pathParam := &PathParameter{
+		OrgID:       orgID,
+		BenchmarkID: benchmarkID,
+	}
+	if err := pathParam.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -101,7 +110,13 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 
 	// Validação adicional do payload
-	if err := ValidateCreateAndUpdateRequest(&PathParameter{Payload: req.Payload}); err != nil {
+	pathParam := &PathParameter{
+		Payload:     req.Payload,
+		OrgID:       orgID,
+		BenchmarkID: benchmarkID,
+		ID:          id,
+	}
+	if err := pathParam.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -121,7 +136,12 @@ func (h *Handler) Delete(c *gin.Context) {
 	id := c.Param("id")
 
 	// Validação dos parâmetros de rota
-	if err := ValidatePathParams(orgID, benchmarkID, id); err != nil {
+	pathParam := &PathParameter{
+		OrgID:       orgID,
+		BenchmarkID: benchmarkID,
+		ID:          id,
+	}
+	if err := pathParam.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

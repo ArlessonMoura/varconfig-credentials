@@ -10,7 +10,7 @@ import (
 	"time"
 
 	dto "projeto-crud-credencials/dto/benchmarkschema"
-	repository "projeto-crud-credencials/internal/service"
+	ports "projeto-crud-credencials/internal/service"
 	models "projeto-crud-credencials/pkg/models/benchmark_schema"
 )
 
@@ -21,12 +21,12 @@ var (
 )
 
 type Service struct {
-	relationalRepo repository.IRelationalRepository
-	nosqlRepo      repository.INoSQLRepository
+	relationalRepo ports.IRelationalRepository
+	nosqlRepo      ports.INoSQLRepository
 
 }
 
-func NewService(relRepo repository.IRelationalRepository, noSQLRepo repository.INoSQLRepository) *Service {
+func NewService(relRepo ports.IRelationalRepository, noSQLRepo ports.INoSQLRepository) *Service {
 	return &Service{
 		relationalRepo: relRepo,
 		nosqlRepo:      noSQLRepo,
