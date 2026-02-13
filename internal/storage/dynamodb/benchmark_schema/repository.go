@@ -54,6 +54,30 @@ func (r *Repository) Create(ctx context.Context, item *models.BenchmarkSchemaNoS
 	return nil
 }
 
+// List retorna todos os schemas de benchmark armazenados usando Query (não Scan)
+func (r *Repository) List(ctx context.Context) ([]models.BenchmarkSchemaNoSQL, error) {
+	// Query pela partição SCHEMA# (todos os schemas começam com SCHEMA#)
+	result, err := r.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(r.tableName),
+		KeyConditionExpression: aws.String("begins_with(PK, :pk_prefix)"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pk_prefix": &types.AttributeValueMemberS{Value: "SCHEMA#"},
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query benchmark schemas from dynamodb: %w", err)
+	}
+
+	var items []models.BenchmarkSchemaNoSQL
+	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal benchmark schemas: %w", err)
+	}
+
+	return items, nil
+}
+
 // GetByID busca um schema pelo ID
 func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkSchemaNoSQL, error) {
 	pk := "SCHEMA#" + id
@@ -87,54 +111,10 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkS
 	return &item, nil
 }
 
-func (r *Repository) Delete(ctx context.Context, id string) error {
-	pk := "SCHEMA#" + id
-
-	key, err := attributevalue.MarshalMap(map[string]string{
-		"PK": pk,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to marshal delete key: %w", err)
-	}
-
-	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(r.tableName),
-		Key:       key,
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to delete item from dynamodb: %w", err)
-	}
-
-	return nil
-}
-
-// List retorna todos os schemas de benchmark armazenados usando Query (não Scan)
-func (r *Repository) List(ctx context.Context) ([]models.BenchmarkSchemaNoSQL, error) {
-	// Query pela partição SCHEMA# (todos os schemas começam com SCHEMA#)
-	result, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(r.tableName),
-		KeyConditionExpression: aws.String("begins_with(PK, :pk_prefix)"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":pk_prefix": &types.AttributeValueMemberS{Value: "SCHEMA#"},
-		},
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to query benchmark schemas from dynamodb: %w", err)
-	}
-
-	var items []models.BenchmarkSchemaNoSQL
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal benchmark schemas: %w", err)
-	}
-
-	return items, nil
-}
-
-
-//Implementação extra--
+//====================
+//
+//====================
+	
 // Update atualiza um schema existente no DynamoDB
 func (r *Repository) Update(ctx context.Context, item *models.BenchmarkSchemaNoSQL) error {
 	pk := "SCHEMA#" + item.ID
@@ -159,6 +139,28 @@ func (r *Repository) Update(ctx context.Context, item *models.BenchmarkSchemaNoS
 
 	if err != nil {
 		return fmt.Errorf("failed to update item in dynamodb: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) Delete(ctx context.Context, id string) error {
+	pk := "SCHEMA#" + id
+
+	key, err := attributevalue.MarshalMap(map[string]string{
+		"PK": pk,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal delete key: %w", err)
+	}
+
+	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: aws.String(r.tableName),
+		Key:       key,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to delete item from dynamodb: %w", err)
 	}
 
 	return nil

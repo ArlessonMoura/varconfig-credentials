@@ -160,7 +160,7 @@ func (s *Service) Update(ctx context.Context, id string, name string, schemaRequ
 		return dto.BenchmarkSchemaResponse{}, fmt.Errorf("failed to update schema in NoSQL database: %w", err)
 	}
 
-	// 3. Atualizar nome no banco relacional (se necessário)
+	// Atualizar nome no banco relacional (se necessário)
 	// Nota: Esta implementação assume que só o schema body muda, não o nome
 	// Se o nome também precisar ser atualizado, precisaríamos de um método Update no relacional repo
 

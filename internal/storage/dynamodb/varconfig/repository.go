@@ -104,7 +104,6 @@ func (r *Repository) GetByID(ctx context.Context, pk string, sk string) (*models
 	return &item, nil
 }
 
-// Implementação extra --
 // Update atualiza um item existente via chaves compostas
 func (r *Repository) Update(ctx context.Context, item models.VarConfigItem) error {
 	av, err := attributevalue.MarshalMap(item)

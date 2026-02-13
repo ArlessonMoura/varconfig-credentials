@@ -26,7 +26,6 @@ func SetupVarConfigRoutes(router *gin.Engine, h *varconfig.Handler) {
 
 			// PUT ou PATCH – Atualizar um varConfig
 			specific.PUT("", h.Update)
-			specific.PATCH("", h.Update)
 
 			// DELETE – Remover um varConfig
 			specific.DELETE("", h.Delete)
