@@ -1,4 +1,4 @@
-package varconfig_dto
+package varconfig
 
 type CreateVarConfigRequest struct {
 	Payload map[string]any `json:"payload" binding:"required"`
