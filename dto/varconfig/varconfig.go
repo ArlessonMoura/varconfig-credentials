@@ -1,17 +1,17 @@
 package varconfig
 
-// VarConfigCreationPayload represents the data required to create a new variable configuration
-type VarConfigCreationPayload struct {
+// CreateVarConfigRequest represents the data required to create a new variable configuration
+type CreateVarConfigRequest struct {
 	Payload map[string]any `json:"payload" binding:"required"`
 }
 
-// VarConfigUpdatePayload represents the data required to update an existing variable configuration
-type VarConfigUpdatePayload struct {
+// UpdateVarConfigRequest represents the data required to update an existing variable configuration
+type UpdateVarConfigRequest struct {
 	Payload map[string]any `json:"payload" binding:"required"`
 }
 
-// VarConfigData represents the complete variable configuration data returned from API
-type VarConfigData struct {
+// VarConfigResponse represents the complete variable configuration data returned from API
+type VarConfigResponse struct {
 	ID          string         `json:"id"`           // Unique identifier (SK)
 	OrgID       string         `json:"org_id"`       // Organization identifier (PK)
 	BenchmarkID string         `json:"benchmark_id"` // Benchmark identifier (part of PK)
@@ -20,7 +20,7 @@ type VarConfigData struct {
 	UpdatedAt   string         `json:"updated_at"`   // Last update timestamp
 }
 
-// VarConfigCollectionResponse represents a collection of variable configurations
-type VarConfigCollectionResponse struct {
-	Data []VarConfigData `json:"data"`
+// ListVarConfigsResponse represents a collection of variable configurations
+type ListVarConfigsResponse struct {
+	Data []VarConfigResponse `json:"data"`
 }

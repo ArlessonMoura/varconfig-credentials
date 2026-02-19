@@ -32,14 +32,14 @@ func NewService(relRepo ports.IRelationalRepository, noSQLRepo ports.INoSQLRepos
 	}
 }
 
-func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkSchemaCreationRequest) (dto.BenchmarkSchemaRegistrationResponse, error) {
+func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.CreateBenchmarkSchemaRequest) (dto.CreateBenchmarkSchemaResponse, error) {
 	// Validações
 	if name == "" {
-		return dto.BenchmarkSchemaRegistrationResponse{}, ErrInvalidInput
+		return dto.CreateBenchmarkSchemaResponse{}, ErrInvalidInput
 	}
 
 	if len(schemaRequest.Schema) == 0 {
-		return dto.BenchmarkSchemaRegistrationResponse{}, ErrEmptySchema
+		return dto.CreateBenchmarkSchemaResponse{}, ErrEmptySchema
 	}
 
 	// 1. Registrar no banco relacional (PostgreSQL)
@@ -48,7 +48,7 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Be
 	}
 
 	if err := s.relationalRepo.Create(ctx, relationalModel); err != nil {
-		return dto.BenchmarkSchemaRegistrationResponse{}, fmt.Errorf("failed to create benchmark schema in relational database: %w", err)
+		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to create benchmark schema in relational database: %w", err)
 	}
 
 	noSQLModel := &models.BenchmarkSchemaNoSQL{
@@ -62,12 +62,12 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Be
 		deleteErr := s.relationalRepo.Delete(ctx, &relationalModel.ID)
 		if deleteErr != nil {
 			fmt.Printf("CRITICAL: Failed to rollback schema %d after DynamoDB failure: %v\n", relationalModel.ID, deleteErr)
-			return dto.BenchmarkSchemaRegistrationResponse{}, fmt.Errorf("failed to save schema in DynamoDB and failed to rollback: %w, rollback error: %w", err, deleteErr)
+			return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to save schema in DynamoDB and failed to rollback: %w, rollback error: %w", err, deleteErr)
 		}
-		return dto.BenchmarkSchemaRegistrationResponse{}, fmt.Errorf("failed to save schema in NoSQL database, rolled back relational entry: %w", err)
+		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to save schema in NoSQL database, rolled back relational entry: %w", err)
 	}
 
-	return dto.BenchmarkSchemaRegistrationResponse{
+	return dto.CreateBenchmarkSchemaResponse{
 		ID:        noSQLModel.ID,
 		Name:      relationalModel.Name,
 		CreatedAt: relationalModel.CreatedAt.Format(time.RFC3339),
@@ -75,7 +75,7 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Be
 }
 
 // GetByID recupera um schema específico pelo ID
-func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaDetails, error) {
+func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaResponse, error) {
 	if id == "" {
 		return nil, ErrSchemaNotFound
 	}
@@ -89,7 +89,7 @@ func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaD
 		return nil, ErrSchemaNotFound
 	}
 
-	return &dto.BenchmarkSchemaDetails{
+	return &dto.BenchmarkSchemaResponse{
 		ID:         item.ID,
 		Name:       "", // Nome não está disponível no NoSQL, poderia buscar do relacional se necessário
 		SchemaBody: item.SchemaBody,
@@ -98,19 +98,19 @@ func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaD
 }
 
 // List recupera todos os schemas disponíveis
-func (s *Service) List(ctx context.Context) (*dto.BenchmarkSchemaCollectionResponse, error) {
+func (s *Service) List(ctx context.Context) (*dto.ListBenchmarkSchemasResponse, error) {
 	items, err := s.nosqlRepo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list schemas from repository: %w", err)
 	}
 
 	if items == nil {
-		return &dto.BenchmarkSchemaCollectionResponse{Data: []dto.BenchmarkSchemaDetails{}, Count: 0}, nil
+		return &dto.ListBenchmarkSchemasResponse{Data: []dto.BenchmarkSchemaResponse{}, Count: 0}, nil
 	}
 
-	var data []dto.BenchmarkSchemaDetails
+	var data []dto.BenchmarkSchemaResponse
 	for _, item := range items {
-		data = append(data, dto.BenchmarkSchemaDetails{
+		data = append(data, dto.BenchmarkSchemaResponse{
 			ID:         item.ID,
 			Name:       "", // Nome não está disponível no NoSQL
 			SchemaBody: item.SchemaBody,
@@ -118,7 +118,7 @@ func (s *Service) List(ctx context.Context) (*dto.BenchmarkSchemaCollectionRespo
 		})
 	}
 
-	return &dto.BenchmarkSchemaCollectionResponse{
+	return &dto.ListBenchmarkSchemasResponse{
 		Data:  data,
 		Count: len(data),
 	}, nil
@@ -126,7 +126,7 @@ func (s *Service) List(ctx context.Context) (*dto.BenchmarkSchemaCollectionRespo
 
 
 // Update atualiza um schema existente usando dual-write
-func (s *Service) Update(ctx context.Context, id string, name string, schemaRequest *dto.BenchmarkSchemaCreationRequest) (*dto.BenchmarkSchemaDetails, error) {
+func (s *Service) Update(ctx context.Context, id string, name string, schemaRequest *dto.UpdateBenchmarkSchemaRequest) (*dto.BenchmarkSchemaResponse, error) {
 	if id == "" || name == "" {
 		return nil, ErrInvalidInput
 	}
@@ -159,7 +159,7 @@ func (s *Service) Update(ctx context.Context, id string, name string, schemaRequ
 	// Nota: Esta implementação assume que só o schema body muda, não o nome
 	// Se o nome também precisar ser atualizado, precisaríamos de um método Update no relacional repo
 
-	return &dto.BenchmarkSchemaDetails{
+	return &dto.BenchmarkSchemaResponse{
 		ID:         updatedNoSQL.ID,
 		Name:       name, // Nome passado como parâmetro
 		SchemaBody: updatedNoSQL.SchemaBody,
