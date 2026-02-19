@@ -1,4 +1,3 @@
-// Package varconfig provides data transfer objects for variable configuration operations.
 package varconfig
 
 // VarConfigCreationPayload represents the data required to create a new variable configuration

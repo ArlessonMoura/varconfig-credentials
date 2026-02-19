@@ -42,10 +42,10 @@ func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaR
 	return nil
 }
 
-func (r *Repository) Delete(ctx context.Context, id int64) error {
+func (r *Repository) Delete(ctx context.Context, id *int64) error {
 	query := `DELETE FROM benchmark_schemas WHERE id = $1`
 
-	_, err := r.db.ExecContext(ctx, query, id)
+	_, err := r.db.ExecContext(ctx, query, *id)
 	if err != nil {
 		return fmt.Errorf("failed to delete benchmark schema for rollback: %w", err)
 	}

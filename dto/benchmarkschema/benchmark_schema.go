@@ -1,4 +1,3 @@
-// Package benchmark_schema provides data transfer objects for benchmark schema operations.
 package benchmark_schema
 
 // SchemaFieldType defines the valid types for schema fields

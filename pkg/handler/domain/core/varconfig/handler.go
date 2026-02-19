@@ -41,7 +41,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	// O Service recebe os IDs da URL + o Payload do Body
-	result, err := h.svc.Create(c.Request.Context(), orgID, benchmarkID, req)
+	result, err := h.svc.Create(c.Request.Context(), orgID, benchmarkID, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -121,7 +121,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	result, err := h.svc.Update(c.Request.Context(), orgID, benchmarkID, id, req)
+	result, err := h.svc.Update(c.Request.Context(), orgID, benchmarkID, id, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

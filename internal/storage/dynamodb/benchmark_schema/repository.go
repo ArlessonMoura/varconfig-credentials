@@ -55,7 +55,7 @@ func (r *Repository) Create(ctx context.Context, item *models.BenchmarkSchemaNoS
 }
 
 // List retorna todos os schemas de benchmark armazenados usando Query (não Scan)
-func (r *Repository) List(ctx context.Context) ([]models.BenchmarkSchemaNoSQL, error) {
+func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaNoSQL, error) {
 	// Query pela partição SCHEMA# (todos os schemas começam com SCHEMA#)
 	result, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
@@ -75,7 +75,13 @@ func (r *Repository) List(ctx context.Context) ([]models.BenchmarkSchemaNoSQL, e
 		return nil, fmt.Errorf("failed to unmarshal benchmark schemas: %w", err)
 	}
 
-	return items, nil
+	// Converter slice de structs para slice de ponteiros
+	var pointerItems []*models.BenchmarkSchemaNoSQL
+	for i := range items {
+		pointerItems = append(pointerItems, &items[i])
+	}
+
+	return pointerItems, nil
 }
 
 // GetByID busca um schema pelo ID
