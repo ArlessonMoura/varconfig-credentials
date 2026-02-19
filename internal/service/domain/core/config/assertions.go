@@ -1,4 +1,4 @@
-package varconfig
+package config
 
 // Service assertions são verificados nos testes unitários
 // para evitar ciclos de importação

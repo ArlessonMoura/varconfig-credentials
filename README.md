@@ -20,21 +20,21 @@ HTTP      Negócio   DynamoDB
 - **logger/**: Logging com context propagation e níveis
 - **metrics/**: Métricas com padrão `service_<domain>_<operation>_latency_ms`
 
-#### **🌐 Handler Layer** (`pkg/handler/varconfig/`)
+#### **🌐 Handler Layer** (`pkg/handler/config/`)
 
 - Tradução de protocolo HTTP
 - Validação sintática de entrada
 - Wiring de dependências
 - **SEM lógica de negócio**
 
-#### **🎯 Service Layer** (`internal/service/domain/varconfig/`)
+#### **🎯 Service Layer** (`internal/service/domain/config/`)
 
 - Lógica de negócio completa
 - Validações de regras
 - Injeção de repository, logger, metrics
 - Context propagation
 
-#### **💾 Storage Layer** (`internal/storage/dynamodb/varconfig/`)
+#### **💾 Storage Layer** (`internal/storage/dynamodb/config/`)
 
 - Implementação DynamoDB com PK+SK otimizado
 - **ZERO Scan operations** - apenas Query eficientes
@@ -194,19 +194,19 @@ curl -X DELETE http://localhost:8080/org/123/compliance/variables/pci-dss-v3.2.1
 ### Unit Tests
 
 ```bash
-go test ./internal/service/domain/varconfig/...
+go test ./internal/service/domain/config/...
 ```
 
 ### Integration Tests
 
 ```bash
-go test ./pkg/handler/varconfig/...
+go test ./pkg/handler/config/...
 ```
 
 ### Contract Tests
 
 ```bash
-go test ./internal/service/domain/varconfig/... -run Contract
+go test ./internal/service/domain/config/... -run Contract
 ```
 
 ## 🔧 Estrutura do Projeto
@@ -221,7 +221,7 @@ projeto-crud-credentials/
 │   ├── errors/                    # Tratamento de erros
 │   ├── logger/                    # Logging centralizado
 │   └── metrics/                   # Métricas
-├── 🌐 pkg/handler/varconfig/       # Camada HTTP
+├── 🌐 pkg/handler/config/       # Camada HTTP
 ├── 🎯 internal/service/domain/      # Camada de negócio
 └── 💾 internal/storage/dynamodb/     # Camada de dados
 ```

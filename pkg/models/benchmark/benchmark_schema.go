@@ -20,12 +20,12 @@ type BenchmarkSchemaCreateRequest struct {
 	SchemaBody map[string]string `json:"schema_body"`
 }
 
-// BenchmarkSchemaUpdateRequest representa os dados para atualização de um schema existente
-type BenchmarkSchemaUpdateRequest struct {
-	ID         string            `json:"id"`
-	Name       string            `json:"name"`
-	SchemaBody map[string]string `json:"schema_body"`
-}
+// // BenchmarkSchemaUpdateRequest representa os dados para atualização de um schema existente
+// type BenchmarkSchemaUpdateRequest struct {
+// 	ID         string            `json:"id"`
+// 	Name       string            `json:"name"`
+// 	SchemaBody map[string]string `json:"schema_body"`
+// }
 
 // BenchmarkSchemaDynamoDB representa o schema completo no DynamoDB
 type BenchmarkSchemaDynamoDB struct {

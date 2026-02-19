@@ -1,9 +1,9 @@
-package varconfig
+package config
 
 import (
 	// Aliases para evitar confusão entre pacotes de mesmo nome
-	service "projeto-crud-credentials/internal/service/domain/core/varconfig"
-	storage "projeto-crud-credentials/internal/storage/dynamodb/varconfig"
+	service "projeto-crud-credentials/internal/service/domain/core/config"
+	storage "projeto-crud-credentials/internal/storage/dynamodb/config"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )

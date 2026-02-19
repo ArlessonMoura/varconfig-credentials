@@ -1,4 +1,4 @@
-package benchmarkschema
+package benchmark
 
 import (
 	"net/http"
@@ -35,13 +35,13 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 	schema, err := h.svc.GetByID(c.Request.Context(), benchmarkID)
 	if err != nil {
-		// if errors.Is(err, errors.New("schema not found")) {
-		// 	c.JSON(http.StatusNotFound, gin.H{
-		// 		"error":   "Schema not found",
-		// 		"details": "No benchmark schema found with the provided ID",
-		// 	})
-		// 	return
-		// }
+		if err.Error() == "schema not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "Schema not found",
+				"details": err.Error(),
+			})
+			return
+		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal server error",

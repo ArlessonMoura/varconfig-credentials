@@ -1,10 +1,10 @@
-package varconfig
+package config
 
 import (
 	"context"
 	"fmt"
 
-	models "projeto-crud-credentials/pkg/models/varconfig"
+	models "projeto-crud-credentials/pkg/models/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"

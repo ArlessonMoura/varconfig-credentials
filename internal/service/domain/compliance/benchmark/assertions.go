@@ -1,4 +1,4 @@
-package benchmarkschema
+package benchmark
 
 import (
 	svchandler "projeto-crud-credentials/pkg/handler"

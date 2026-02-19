@@ -1,4 +1,4 @@
-package benchmarkschemas
+package benchmarks
 
 import (
 	repoService "projeto-crud-credentials/internal/service"

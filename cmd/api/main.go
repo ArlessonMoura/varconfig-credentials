@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	handlerbenchmarkschema "projeto-crud-credentials/pkg/handler/domain/compliance/benchmarkschema"
-	handlervarconfig "projeto-crud-credentials/pkg/handler/domain/core/varconfig"
+	hbenchmark "projeto-crud-credentials/pkg/handler/domain/compliance/benchmark"
+	hconfig "projeto-crud-credentials/pkg/handler/domain/core/config"
 	"projeto-crud-credentials/routes"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -56,8 +56,8 @@ func Bootstrap() {
 		log.Fatal("Erro: Variável de ambiente DYNAMODB_TABLE_BENCHMARK_SCHEMA nao configurada")
 	}
 
-	varConfigHandler := handlervarconfig.InitHandler(client, tableName)
-	benchmarkSchemaHandler := handlerbenchmarkschema.InitHandler(sqlDB, client, benchmarkSchemaTableName)
+	varConfigHandler := hconfig.InitHandler(client, tableName)
+	benchmarkSchemaHandler := hbenchmark.InitHandler(sqlDB, client, benchmarkSchemaTableName)
 
 	router := routes.SetupRouter(varConfigHandler, benchmarkSchemaHandler)
 

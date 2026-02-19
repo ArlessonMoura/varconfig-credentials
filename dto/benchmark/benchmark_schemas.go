@@ -1,4 +1,4 @@
-package benchmarkschema
+package benchmark
 
 // SchemaFieldType defines the valid types for schema fields
 type SchemaFieldType string

@@ -1,4 +1,4 @@
-package varconfig
+package config
 
 import (
 	repoVarconfig "projeto-crud-credentials/internal/service"

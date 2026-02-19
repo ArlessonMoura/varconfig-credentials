@@ -1,4 +1,4 @@
-package benchmarkschema
+package benchmark
 
 import (
 	"errors"

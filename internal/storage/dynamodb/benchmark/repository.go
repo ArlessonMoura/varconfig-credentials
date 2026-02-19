@@ -1,4 +1,4 @@
-package benchmarkschema
+package benchmark
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	models "projeto-crud-credentials/pkg/models/benchmarkschema"
+	models "projeto-crud-credentials/pkg/models/benchmark"
 )
 
 type Repository struct {
@@ -122,53 +122,53 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkS
 //
 //====================
 	
-// Update atualiza um schema existente no DynamoDB
-func (r *Repository) Update(ctx context.Context, item *models.BenchmarkSchemaDynamoDB) error {
-	pk := "SCHEMA#" + item.ID
+// // Update atualiza um schema existente no DynamoDB
+// func (r *Repository) Update(ctx context.Context, item *models.BenchmarkSchemaDynamoDB) error {
+// 	pk := "SCHEMA#" + item.ID
 
-	// Criar mapa com os campos incluindo PK
-	itemWithKeys := map[string]interface{}{
-		"PK":          pk,
-		"ID":          item.ID,
-		"schema_body": item.SchemaBody,
-		"created_at":  item.CreatedAt,
-	}
+// 	// Criar mapa com os campos incluindo PK
+// 	itemWithKeys := map[string]interface{}{
+// 		"PK":          pk,
+// 		"ID":          item.ID,
+// 		"schema_body": item.SchemaBody,
+// 		"created_at":  item.CreatedAt,
+// 	}
 
-	av, err := attributevalue.MarshalMap(itemWithKeys)
-	if err != nil {
-		return fmt.Errorf("failed to marshal benchmark schema for update: %w", err)
-	}
+// 	av, err := attributevalue.MarshalMap(itemWithKeys)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal benchmark schema for update: %w", err)
+// 	}
 
-	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(r.tableName),
-		Item:      av,
-	})
+// 	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
+// 		TableName: aws.String(r.tableName),
+// 		Item:      av,
+// 	})
 
-	if err != nil {
-		return fmt.Errorf("failed to update item in dynamodb: %w", err)
-	}
+// 	if err != nil {
+// 		return fmt.Errorf("failed to update item in dynamodb: %w", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-func (r *Repository) Delete(ctx context.Context, id string) error {
-	pk := "SCHEMA#" + id
+// func (r *Repository) Delete(ctx context.Context, id string) error {
+// 	pk := "SCHEMA#" + id
 
-	key, err := attributevalue.MarshalMap(map[string]string{
-		"PK": pk,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to marshal delete key: %w", err)
-	}
+// 	key, err := attributevalue.MarshalMap(map[string]string{
+// 		"PK": pk,
+// 	})
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal delete key: %w", err)
+// 	}
 
-	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(r.tableName),
-		Key:       key,
-	})
+// 	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+// 		TableName: aws.String(r.tableName),
+// 		Key:       key,
+// 	})
 
-	if err != nil {
-		return fmt.Errorf("failed to delete item from dynamodb: %w", err)
-	}
+// 	if err != nil {
+// 		return fmt.Errorf("failed to delete item from dynamodb: %w", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

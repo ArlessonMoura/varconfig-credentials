@@ -1,4 +1,4 @@
-package varconfig
+package config
 
 // CreateVarConfigRequest represents the data required to create a new variable configuration
 type CreateVarConfigRequest struct {

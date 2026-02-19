@@ -1,17 +1,17 @@
-package varconfig
+package config
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	ports "projeto-crud-credentials/internal/service"
 	"time"
 
-	dto "projeto-crud-credentials/dto/varconfig"
-	models "projeto-crud-credentials/pkg/models/varconfig"
+	dto "projeto-crud-credentials/dto/config"
+	ports "projeto-crud-credentials/internal/service"
+	models "projeto-crud-credentials/pkg/models/config"
 )
 
-// Package varconfig provides domain services for managing variable configurations.
+// package config provides domain services for managing variable configurations.
 // Erros de domínio básicos
 var (
 	ErrNotFound     = errors.New("varconfig not found")
