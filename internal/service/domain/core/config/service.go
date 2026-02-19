@@ -42,7 +42,7 @@ func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, 
 	return s.mapItemToResponse(item), nil
 }
 
-// List retorna todas as configurações de um benchmark específico
+// List retorna todas as configurações de benchmark (versão leve sem payload)
 func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.ListVarConfigsResponse, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
@@ -53,15 +53,21 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Lis
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
-	var data []dto.VarConfigResponse
+	var data []dto.ListVarConfigResponse
 	for _, item := range items {
-		data = append(data, *s.mapItemToResponse(item))
+		data = append(data, dto.ListVarConfigResponse{
+			ID:          fmt.Sprintf("%d", item.ID),
+			OrgID:       item.OrgID,
+			BenchmarkID: item.BenchmarkID,
+			CreatedAt:   item.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:   item.UpdatedAt.Format(time.RFC3339),
+		})
 	}
 
 	return &dto.ListVarConfigsResponse{Data: data}, nil
 }
 
-// GetByID busca um item específico pelo ID
+// GetByID retorna todas as configurações de um benchmark específico
 func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*dto.VarConfigResponse, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
 		return nil, ErrInvalidInput

@@ -18,6 +18,15 @@ type UpdateVarConfigRequest struct {
 	Payload map[string]any `json:"payload" binding:"required"`
 }
 
+// ListVarConfigResponse representa um item leve na listagem (sem payload)
+type ListVarConfigResponse struct {
+	ID          string `json:"id"`           // Unique identifier (SK)
+	OrgID       string `json:"org_id"`       // Organization identifier (PK)
+	BenchmarkID string `json:"benchmark_id"` // Benchmark identifier (part of PK)
+	CreatedAt   string `json:"created_at"`   // Creation timestamp
+	UpdatedAt   string `json:"updated_at"`   // Last update timestamp
+}
+
 type ListVarConfigsResponse struct {
-	Data []VarConfigResponse `json:"data"`
+	Data []ListVarConfigResponse `json:"data"`
 }
