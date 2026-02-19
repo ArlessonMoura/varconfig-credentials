@@ -25,7 +25,7 @@ func NewRepository(client *dynamodb.Client, tableName string) *Repository {
 }
 
 // Create armazena o schema no DynamoDB usando o ID como chave de partição
-func (r *Repository) Create(ctx context.Context, item *models.BenchmarkSchemaNoSQL) error {
+func (r *Repository) Create(ctx context.Context, item *models.BenchmarkSchemaDynamoDB) error {
 	// Gerar PK a partir do ID (sem SK redundante)
 	pk := "SCHEMA#" + item.ID
 
@@ -54,8 +54,8 @@ func (r *Repository) Create(ctx context.Context, item *models.BenchmarkSchemaNoS
 	return nil
 }
 
-// List retorna todos os schemas de benchmark armazenados usando Query (não Scan)
-func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaNoSQL, error) {
+// List retorna apenas campos essenciais para listagem (ID, CreatedAt)
+func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaListDynamoDB, error) {
 	// Query pela partição SCHEMA# (todos os schemas começam com SCHEMA#)
 	result, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
@@ -63,20 +63,21 @@ func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaNoSQL, 
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pk_prefix": &types.AttributeValueMemberS{Value: "SCHEMA#"},
 		},
+		ProjectionExpression: aws.String("ID, created_at"),
 	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to query benchmark schemas from dynamodb: %w", err)
 	}
 
-	var items []models.BenchmarkSchemaNoSQL
+	var items []models.BenchmarkSchemaListDynamoDB
 	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal benchmark schemas: %w", err)
 	}
 
 	// Converter slice de structs para slice de ponteiros
-	var pointerItems []*models.BenchmarkSchemaNoSQL
+	var pointerItems []*models.BenchmarkSchemaListDynamoDB
 	for i := range items {
 		pointerItems = append(pointerItems, &items[i])
 	}
@@ -85,7 +86,7 @@ func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaNoSQL, 
 }
 
 // GetByID busca um schema pelo ID
-func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkSchemaNoSQL, error) {
+func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkSchemaDynamoDB, error) {
 	pk := "SCHEMA#" + id
 
 	key, err := attributevalue.MarshalMap(map[string]string{
@@ -108,7 +109,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkS
 		return nil, nil // Not found não é erro de sistema
 	}
 
-	var item models.BenchmarkSchemaNoSQL
+	var item models.BenchmarkSchemaDynamoDB
 	err = attributevalue.UnmarshalMap(result.Item, &item)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal benchmark schema: %w", err)
@@ -122,7 +123,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*models.BenchmarkS
 //====================
 	
 // Update atualiza um schema existente no DynamoDB
-func (r *Repository) Update(ctx context.Context, item *models.BenchmarkSchemaNoSQL) error {
+func (r *Repository) Update(ctx context.Context, item *models.BenchmarkSchemaDynamoDB) error {
 	pk := "SCHEMA#" + item.ID
 
 	// Criar mapa com os campos incluindo PK

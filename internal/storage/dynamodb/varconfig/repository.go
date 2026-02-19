@@ -47,14 +47,15 @@ func (r *Repository) Create(ctx context.Context, item *models.VarConfigItem) err
 	return nil
 }
 
-// List busca todos os itens de uma partição (Benchmark)
-func (r *Repository) List(ctx context.Context, pk string) ([]*models.VarConfigItem, error) {
+// List retorna apenas campos essenciais para listagem (ID, OrgID, BenchmarkID, datas)
+func (r *Repository) List(ctx context.Context, pk string) ([]*models.VarConfigListItem, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
 		KeyConditionExpression: aws.String("PK = :pk"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pk": &types.AttributeValueMemberS{Value: pk},
 		},
+		ProjectionExpression: aws.String("id, org_id, benchmark_id, created_at, updated_at"),
 	}
 
 	result, err := r.client.Query(ctx, input)
@@ -62,7 +63,7 @@ func (r *Repository) List(ctx context.Context, pk string) ([]*models.VarConfigIt
 		return nil, fmt.Errorf("failed to query dynamodb: %w", err)
 	}
 
-	var items []*models.VarConfigItem
+	var items []*models.VarConfigListItem
 	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal query results: %w", err)
@@ -70,7 +71,6 @@ func (r *Repository) List(ctx context.Context, pk string) ([]*models.VarConfigIt
 
 	return items, nil
 }
-
 
 // GetByID busca um item específico pela PK e SK
 func (r *Repository) GetByID(ctx context.Context, pk string, sk string) (*models.VarConfigItem, error) {

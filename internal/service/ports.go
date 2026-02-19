@@ -12,8 +12,9 @@ type IVarConfigRepository interface {
 	// CREATE (PutItem do DynamoDB)
 	Create(ctx context.Context, item *varConfigModels.VarConfigItem) error
 
-	//TODO: observar se a List esta sendo usada corretamente para listar todos os items
-	List(ctx context.Context, pk string) ([]*varConfigModels.VarConfigItem, error)
+	// List retorna apenas campos essenciais para listagem (sem payload pesado)
+	List(ctx context.Context, pk string) ([]*varConfigModels.VarConfigListItem, error)
+	
 	// GetByID busca um item específico pela PK e SK
 	GetByID(ctx context.Context, pk string, sk string) (*varConfigModels.VarConfigItem, error)
 
@@ -31,18 +32,20 @@ type IVarConfigRepository interface {
 
 // IRelationalRepository define o contrato para persistência relacional (PostgreSQL)
 type IRelationalRepository interface {
-	Create(ctx context.Context, schema *benchmarkModels.BenchmarkSchemaRelational) error
+	Create(ctx context.Context, schema *benchmarkModels.BenchmarkSchemaPostgreSQL) error
 	// Delete remove o registro em caso de falha no Dynamo (Rollback)
 	Delete(ctx context.Context, id *int64) error
 }
 
 // INoSQLRepository define o contrato para persistência NoSQL genérica
 type INoSQLRepository interface {
-	Create(ctx context.Context, item *benchmarkModels.BenchmarkSchemaNoSQL) error
+	Create(ctx context.Context, item *benchmarkModels.BenchmarkSchemaDynamoDB) error
 	
+	// List retorna apenas campos essenciais para listagem (sem schema_body pesado)
+	List(ctx context.Context) ([]*benchmarkModels.BenchmarkSchemaListDynamoDB, error)
+			
 	//Na verdade lista pelo PK
-	GetByID(ctx context.Context, id string) (*benchmarkModels.BenchmarkSchemaNoSQL, error)
-	List(ctx context.Context) ([]*benchmarkModels.BenchmarkSchemaNoSQL, error)
-	Update(ctx context.Context, item *benchmarkModels.BenchmarkSchemaNoSQL) error
+	GetByID(ctx context.Context, id string) (*benchmarkModels.BenchmarkSchemaDynamoDB, error)
+	Update(ctx context.Context, item *benchmarkModels.BenchmarkSchemaDynamoDB) error
 	Delete(ctx context.Context, id string) error
 }

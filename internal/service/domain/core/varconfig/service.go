@@ -67,7 +67,7 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Lis
 
 	var data []dto.VarConfigResponse
 	for _, item := range items {
-		data = append(data, *s.mapItemToResponse(item))
+		data = append(data, *s.mapListItemToResponse(item))
 	}
 
 	return &dto.ListVarConfigsResponse{Data: data}, nil
@@ -126,6 +126,17 @@ func (s *Service) mapItemToResponse(item *models.VarConfigItem) *dto.VarConfigRe
 		OrgID:       item.OrgID,
 		BenchmarkID: item.BenchmarkID,
 		Payload:     item.Payload,
+		CreatedAt:   item.CreatedAt,
+		UpdatedAt:   item.UpdatedAt,
+	}
+}
+
+func (s *Service) mapListItemToResponse(item *models.VarConfigListItem) *dto.VarConfigResponse {
+	return &dto.VarConfigResponse{
+		ID:          item.ID,
+		OrgID:       item.OrgID,
+		BenchmarkID: item.BenchmarkID,
+		Payload:     nil, // Payload não disponível na listagem
 		CreatedAt:   item.CreatedAt,
 		UpdatedAt:   item.UpdatedAt,
 	}

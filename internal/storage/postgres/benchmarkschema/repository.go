@@ -19,7 +19,7 @@ func NewRepository(db *sql.DB) *Repository {
 	}
 }
 
-func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaRelational) error {
+func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaPostgreSQL) error {
 	query := `
 		INSERT INTO benchmark_schemas (name, created_at, updated_at)
 		VALUES ($1, $2, $3)
