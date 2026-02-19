@@ -1,10 +1,10 @@
-package benchmark_schema
+package benchmarkschema
 
 import (
 	"database/sql"
-	service "projeto-crud-credencials/internal/service/domain/compliance/benchmark_schema"
-	dynamodbRepo "projeto-crud-credencials/internal/storage/dynamodb/benchmark_schema"
-	postgresRepo "projeto-crud-credencials/internal/storage/postgres/benchmark_schema"
+	service "projeto-crud-credencials/internal/service/domain/compliance/benchmarkschema"
+	dynamodbRepo "projeto-crud-credencials/internal/storage/dynamodb/benchmarkschema"
+	postgresRepo "projeto-crud-credencials/internal/storage/postgres/benchmarkschema"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )

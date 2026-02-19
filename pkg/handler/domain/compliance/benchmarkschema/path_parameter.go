@@ -1,5 +1,4 @@
-// Package benchmark_schema provides validation for benchmark schema path parameters.
-package benchmark_schema
+package benchmarkschema
 
 import (
 	"errors"

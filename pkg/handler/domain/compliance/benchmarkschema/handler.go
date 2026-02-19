@@ -1,4 +1,4 @@
-package benchmark_schema
+package benchmarkschema
 
 import (
 	"net/http"

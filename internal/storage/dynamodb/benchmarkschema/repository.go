@@ -1,4 +1,4 @@
-package benchmark_schema
+package benchmarkschema
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	models "projeto-crud-credencials/pkg/models/benchmark_schema"
+	models "projeto-crud-credencials/pkg/models/benchmarkschema"
 )
 
 type Repository struct {

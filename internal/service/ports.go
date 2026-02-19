@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	benchmarkModels "projeto-crud-credencials/pkg/models/benchmark_schema"
+	benchmarkModels "projeto-crud-credencials/pkg/models/benchmarkschema"
 	varConfigModels "projeto-crud-credencials/pkg/models/varconfig"
 )
 

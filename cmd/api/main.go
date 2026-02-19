@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	handlerbenchmarkschema "projeto-crud-credencials/pkg/handler/domain/compliance/benchmark_schema"
+	handlerbenchmarkschema "projeto-crud-credencials/pkg/handler/domain/compliance/benchmarkschema"
 	handlervarconfig "projeto-crud-credencials/pkg/handler/domain/core/varconfig"
 	"projeto-crud-credencials/routes"
 

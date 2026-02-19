@@ -1,4 +1,4 @@
-package benchmark_schema
+package benchmarkschema
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	dto "projeto-crud-credencials/dto/benchmarkschema"
 	ports "projeto-crud-credencials/internal/service"
-	models "projeto-crud-credencials/pkg/models/benchmark_schema"
+	models "projeto-crud-credencials/pkg/models/benchmarkschema"
 )
 
 var (

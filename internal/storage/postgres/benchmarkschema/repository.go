@@ -1,4 +1,4 @@
-package benchmark_schema
+package benchmarkschemas
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	models "projeto-crud-credencials/pkg/models/benchmark_schema"
+	models "projeto-crud-credencials/pkg/models/benchmarkschema"
 )
 
 type Repository struct {
