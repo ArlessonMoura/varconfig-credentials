@@ -9,6 +9,8 @@ import (
 	dto "projeto-crud-credentials/dto/config"
 	ports "projeto-crud-credentials/internal/service"
 	models "projeto-crud-credentials/pkg/models/config"
+
+	"github.com/google/uuid"
 )
 
 // package config provides domain services for managing variable configurations.
@@ -28,14 +30,14 @@ func NewService(repository ports.IVarConfigRepository) *Service {
 	}
 }
 
-// Create cria um novo VarConfig gerando PK e SK com ID em nanosegundos
+// Create cria um novo VarConfig gerando PK e SK com ID único (UUID v4)
 func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *dto.CreateVarConfigRequest) (*dto.VarConfigResponse, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
 	}
 
-	// ID em nanosegundos (Unix nano timestamp)
-	id := fmt.Sprintf("%d", time.Now().UnixNano())
+	// ID único usando UUID v4
+	id := uuid.NewString()
 	now := time.Now().Format(time.RFC3339)
 
 	item := models.VarConfigItem{
