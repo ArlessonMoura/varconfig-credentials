@@ -1,54 +1,54 @@
-package benchmarks
+package benchmark
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"time"
+
+	"gorm.io/gorm"
 
 	models "projeto-crud-credentials/pkg/models/benchmark"
 )
 
 type Repository struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
-func NewRepository(db *sql.DB) *Repository {
-	return &Repository{
-		db: db,
-	}
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
 }
 
+// Create cria o registro usando uma transação GORM
 func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaPostgreSQL) error {
-	query := `
-		INSERT INTO benchmark_schemas (name, created_at, updated_at)
-		VALUES ($1, $2, $3)
-		RETURNING id, created_at, updated_at
-	`
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(schema).Error; err != nil {
+			return fmt.Errorf("failed to insert benchmark schema: %w", err)
+		}
+		return nil
+	})
+}
 
-	now := time.Now()
-	
-	// Executa a query e já mapeia o ID gerado pelo Serial/Auto-increment de volta para a struct
-	err := r.db.QueryRowContext(ctx, query, schema.Name, now, now).Scan(
-		&schema.ID, 
-		&schema.CreatedAt, 
-		&schema.UpdatedAt,
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to insert benchmark schema: %w", err)
+func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaPostgreSQL, error) {
+	var items []*models.BenchmarkSchemaPostgreSQL
+	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&items).Error; err != nil {
+		return nil, fmt.Errorf("failed to list benchmark schemas: %w", err)
 	}
+	return items, nil
+}
 
-	return nil
+func (r *Repository) GetByID(ctx context.Context, id int64) (*models.BenchmarkSchemaPostgreSQL, error) {
+	var item models.BenchmarkSchemaPostgreSQL
+	if err := r.db.WithContext(ctx).First(&item, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get benchmark schema: %w", err)
+	}
+	return &item, nil
 }
 
 func (r *Repository) Delete(ctx context.Context, id *int64) error {
-	query := `DELETE FROM benchmark_schemas WHERE id = $1`
-
-	_, err := r.db.ExecContext(ctx, query, *id)
-	if err != nil {
-		return fmt.Errorf("failed to delete benchmark schema for rollback: %w", err)
+	if err := r.db.WithContext(ctx).Delete(&models.BenchmarkSchemaPostgreSQL{}, *id).Error; err != nil {
+		return fmt.Errorf("failed to delete benchmark schema: %w", err)
 	}
-
 	return nil
 }

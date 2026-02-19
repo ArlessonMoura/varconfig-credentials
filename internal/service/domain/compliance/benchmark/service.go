@@ -19,16 +19,11 @@ var (
 )
 
 type Service struct {
-	relationalRepo ports.IRelationalRepository
-	nosqlRepo      ports.INoSQLRepository
-
+	relationalRepo ports.IBenchmarkRepository
 }
 
-func NewService(relationalRepo ports.IRelationalRepository, nosqlRepo ports.INoSQLRepository) *Service {
-	return &Service{
-		relationalRepo: relationalRepo,
-		nosqlRepo:      nosqlRepo,
-	}
+func NewService(relationalRepo ports.IBenchmarkRepository) *Service {
+	return &Service{relationalRepo: relationalRepo}
 }
 
 func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.CreateBenchmarkSchemaRequest) (dto.CreateBenchmarkSchemaResponse, error) {
@@ -41,52 +36,31 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Cr
 		return dto.CreateBenchmarkSchemaResponse{}, ErrEmptySchema
 	}
 
-	// 1. Criar no PostgreSQL primeiro
-	postgresSchema := &models.BenchmarkSchemaPostgreSQL{
-		Name: name,
+	// Marshal full schema definition into JSON and store in jsonb column
+	schemaJSON, err := json.Marshal(schemaRequest.Schema)
+	if err != nil {
+		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
-	err := s.relationalRepo.Create(ctx, postgresSchema)
-	if err != nil {
+	postgresSchema := &models.BenchmarkSchemaPostgreSQL{
+		Name:   name,
+		Schema: schemaJSON,
+	}
+
+	if err := s.relationalRepo.Create(ctx, postgresSchema); err != nil {
 		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to create schema in relational db: %w", err)
 	}
 
-	// Converter SchemaFieldDefinition para map[string]string para o NoSQL
-	schemaBody := make(map[string]string)
-	for key, field := range schemaRequest.Schema {
-		schemaBody[key] = string(field.Type)
-		if field.Items != nil {
-			schemaBody[key] += "[" + string(field.Items.Type) + "]"
-		}
-	}
-
-	// 2. Criar no DynamoDB com o ID gerado pelo PostgreSQL
-	nosqlSchema := &models.BenchmarkSchemaDynamoDB{
-		ID:         fmt.Sprintf("%d", postgresSchema.ID),
-		SchemaBody: schemaBody,
-		CreatedAt:  postgresSchema.CreatedAt.Format(time.RFC3339),
-	}
-
-	err = s.nosqlRepo.Create(ctx, nosqlSchema)
-	if err != nil {
-		// Rollback: deletar do PostgreSQL se falhar no DynamoDB
-		rollbackErr := s.relationalRepo.Delete(ctx, &postgresSchema.ID)
-		if rollbackErr != nil {
-			return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to create schema in nosql db: %w, rollback failed: %v", err, rollbackErr)
-		}
-		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to create schema in nosql db: %w", err)
-	}
-
 	return dto.CreateBenchmarkSchemaResponse{
-		ID:        nosqlSchema.ID,
+		ID:        fmt.Sprintf("%d", postgresSchema.ID),
 		Name:      name,
-		CreatedAt: nosqlSchema.CreatedAt,
+		CreatedAt: postgresSchema.CreatedAt.Format(time.RFC3339),
 	}, nil
 }
 
 // List recupera todos os schemas disponíveis (versão enxuta sem SchemaBody)
 func (s *Service) List(ctx context.Context) (*dto.ListBenchmarkSchemasResponse, error) {
-	items, err := s.nosqlRepo.List(ctx)
+	items, err := s.relationalRepo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list schemas from repository: %w", err)
 	}
@@ -98,10 +72,10 @@ func (s *Service) List(ctx context.Context) (*dto.ListBenchmarkSchemasResponse, 
 	var data []dto.BenchmarkSchemaResponse
 	for _, item := range items {
 		data = append(data, dto.BenchmarkSchemaResponse{
-			ID:         item.ID,
-			Name:       "", // Nome não está disponível no NoSQL
-			SchemaBody: nil, // SchemaBody não disponível na listagem enxuta
-			CreatedAt:  item.CreatedAt,
+			ID:         fmt.Sprintf("%d", item.ID),
+			Name:       item.Name,
+			SchemaBody: nil,
+			CreatedAt:  item.CreatedAt.Format(time.RFC3339),
 		})
 	}
 
@@ -111,120 +85,37 @@ func (s *Service) List(ctx context.Context) (*dto.ListBenchmarkSchemasResponse, 
 	}, nil
 }
 
-// GetByID busca um schema pelo ID no DynamoDB
+// GetByID busca um schema pelo ID
 func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaResponse, error) {
-	item, err := s.nosqlRepo.GetByID(ctx, id)
+	// id vem como string (do handler). Converter para int64
+	var intID int64
+	if _, err := fmt.Sscan(id, &intID); err != nil {
+		return nil, fmt.Errorf("invalid id format: %w", err)
+	}
+
+	item, err := s.relationalRepo.GetByID(ctx, intID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schema from repository: %w", err)
 	}
-
 	if item == nil {
 		return nil, ErrSchemaNotFound
 	}
 
+	// Unmarshal stored JSON into DTO structure and convert to string map for compatibility
+	var schemaDef map[string]dto.SchemaFieldDefinition
+	if err := json.Unmarshal(item.Schema, &schemaDef); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal stored schema: %w", err)
+	}
+
+	schemaBody := convertSchemaBodyToStringMap(schemaDef)
+
 	return &dto.BenchmarkSchemaResponse{
-		ID:         item.ID,
-		Name:       "", // Nome não está disponível no NoSQL, poderia buscar do relacional se necessário
-		SchemaBody: item.SchemaBody,
-		CreatedAt:  item.CreatedAt,
+		ID:         fmt.Sprintf("%d", item.ID),
+		Name:       item.Name,
+		SchemaBody: schemaBody,
+		CreatedAt:  item.CreatedAt.Format(time.RFC3339),
 	}, nil
 }
-
-
-// ============
-
-// ============
-
-// // Update atualiza um schema existente usando dual-write
-// func (s *Service) Update(ctx context.Context, id string, name string, schemaRequest *dto.UpdateBenchmarkSchemaRequest) (*dto.BenchmarkSchemaResponse, error) {
-// 	if id == "" || name == "" {
-// 		return nil, ErrInvalidInput
-// 	}
-
-// 	if len(schemaRequest.Schema) == 0 {
-// 		return nil, ErrEmptySchema
-// 	}
-
-// 	// 1. Buscar schema atual do NoSQL
-// 	existing, err := s.nosqlRepo.GetByID(ctx, id)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to get existing schema: %w", err)
-// 	}
-// 	if existing == nil {
-// 		return nil, ErrSchemaNotFound
-// 	}
-
-// 	// Converter SchemaFieldDefinition para map[string]string para o NoSQL
-// 	schemaBody := make(map[string]string)
-// 	for key, field := range schemaRequest.Schema {
-// 		schemaBody[key] = string(field.Type)
-// 		if field.Items != nil {
-// 			schemaBody[key] += "[" + string(field.Items.Type) + "]"
-// 		}
-// 	}
-
-// 	// 1. Atualizar no DynamoDB
-// 	nosqlSchema := &models.BenchmarkSchemaDynamoDB{
-// 		ID:         id,
-// 		SchemaBody: schemaBody,
-// 		CreatedAt:  existing.CreatedAt, // Mantém created_at original
-// 	}
-
-// 	if err := s.nosqlRepo.Update(ctx, nosqlSchema); err != nil {
-// 		return nil, fmt.Errorf("failed to update schema in NoSQL database: %w", err)
-// 	}
-
-// 	// Atualizar nome no banco relacional (se necessário)
-// 	// Nota: Esta implementação assume que só o schema body muda, não o nome
-// 	// Se o nome também precisar ser atualizado, precisaríamos de um método Update no relacional repo
-
-// 	return &dto.BenchmarkSchemaResponse{
-// 		ID:         nosqlSchema.ID,
-// 		Name:       name, // Nome passado como parâmetro
-// 		SchemaBody: nosqlSchema.SchemaBody,
-// 		CreatedAt:  nosqlSchema.CreatedAt,
-// 	}, nil
-// }
-
-// // Delete remove um schema usando dual-write
-// func (s *Service) Delete(ctx context.Context, id string) error {
-// 	if id == "" {
-// 		return ErrSchemaNotFound
-// 	}
-
-// 	// 1. Verificar se schema existe no NoSQL
-// 	existing, err := s.nosqlRepo.GetByID(ctx, id)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to check schema existence: %w", err)
-// 	}
-// 	if existing == nil {
-// 		return ErrSchemaNotFound
-// 	}
-
-// 	// 2. Converter ID para int64 para o relacional
-// 	relationalID, err := strconv.ParseInt(id, 10, 64)
-// 	if err != nil {
-// 		return fmt.Errorf("invalid schema ID format: %w", err)
-// 	}
-
-// 	// 3. Remover do NoSQL
-// 	if err := s.nosqlRepo.Delete(ctx, id); err != nil {
-// 		return fmt.Errorf("failed to delete schema from NoSQL database: %w", err)
-// 	}
-
-// 	// 4. Remover do relacional
-// 	if err := s.relationalRepo.Delete(ctx, &relationalID); err != nil {
-// 		// Rollback compensatório: tentar recriar no NoSQL se falhar a deleção no relacional
-// 		rollbackErr := s.nosqlRepo.Create(ctx, existing)
-// 		if rollbackErr != nil {
-// 			fmt.Printf("CRITICAL: Failed to rollback schema %s after relational delete failure: %v\n", id, rollbackErr)
-// 			return fmt.Errorf("failed to delete from relational database and failed to rollback: %w, rollback error: %w", err, rollbackErr)
-// 		}
-// 		return fmt.Errorf("failed to delete from relational database, rolled back NoSQL entry: %w", err)
-// 	}
-
-// 	return nil
-// }
 
 func convertSchemaBodyToStringMap(schema map[string]dto.SchemaFieldDefinition) map[string]string {
 	result := make(map[string]string)

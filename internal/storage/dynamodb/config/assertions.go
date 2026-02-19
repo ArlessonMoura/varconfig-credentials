@@ -1,8 +1,0 @@
-package config
-
-import (
-	repoVarconfig "projeto-crud-credentials/internal/service"
-)
-
-// assertions garante que Repository implementa a interface IVarConfigRepository
-var _ repoVarconfig.IVarConfigRepository = (*Repository)(nil)

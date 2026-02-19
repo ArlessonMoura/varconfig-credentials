@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -9,11 +10,8 @@ import (
 	dto "projeto-crud-credentials/dto/config"
 	ports "projeto-crud-credentials/internal/service"
 	models "projeto-crud-credentials/pkg/models/config"
-
-	"github.com/google/uuid"
 )
 
-// package config provides domain services for managing variable configurations.
 // Erros de domínio básicos
 var (
 	ErrNotFound     = errors.New("varconfig not found")
@@ -30,57 +28,52 @@ func NewService(repository ports.IVarConfigRepository) *Service {
 	}
 }
 
-// Create cria um novo VarConfig gerando PK e SK com ID único (UUID v4)
+// Create cria um novo VarConfig com ID gerado automaticamente pelo PostgreSQL
 func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *dto.CreateVarConfigRequest) (*dto.VarConfigResponse, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
 	}
 
-	// ID único usando UUID v4
-	id := uuid.NewString()
-	now := time.Now().Format(time.RFC3339)
-
-	item := models.VarConfigItem{
-		PK:          fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID),
-		SK:          fmt.Sprintf("VARCONFIG#%s", id),
-		ID:          id,
-		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
-		Payload:     input.Payload,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
-
-	if err := s.repository.Create(ctx, &item); err != nil {
+	item, err := s.repository.Create(ctx, orgID, benchmarkID, input.Payload)
+	if err != nil {
 		return nil, fmt.Errorf("storage error: %w", err)
 	}
 
-	return s.mapItemToResponse(&item), nil
+	return s.mapItemToResponse(item), nil
 }
 
-// List retorna todas as configurações de um benchmark
+// List retorna todas as configurações de um benchmark específico
 func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.ListVarConfigsResponse, error) {
-	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
+	if orgID == "" || benchmarkID == "" {
+		return nil, ErrInvalidInput
+	}
 
-	items, err := s.repository.List(ctx, pk)
+	items, err := s.repository.List(ctx, orgID, benchmarkID)
 	if err != nil {
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
 	var data []dto.VarConfigResponse
 	for _, item := range items {
-		data = append(data, *s.mapListItemToResponse(item))
+		data = append(data, *s.mapItemToResponse(item))
 	}
 
 	return &dto.ListVarConfigsResponse{Data: data}, nil
 }
 
-// GetByID busca um item específico usando PK e SK
+// GetByID busca um item específico pelo ID
 func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*dto.VarConfigResponse, error) {
-	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
-	sk := fmt.Sprintf("VARCONFIG#%s", id)
+	if orgID == "" || benchmarkID == "" || id == "" {
+		return nil, ErrInvalidInput
+	}
 
-	item, err := s.repository.GetByID(ctx, pk, sk)
+	// Converter ID string para int64
+	var intID int64
+	if _, err := fmt.Sscan(id, &intID); err != nil {
+		return nil, fmt.Errorf("invalid id format: %w", err)
+	}
+
+	item, err := s.repository.GetByID(ctx, intID)
 	if err != nil {
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
@@ -88,15 +81,27 @@ func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*
 		return nil, ErrNotFound
 	}
 
+	// Validar que o item pertence aos IDs fornecidos
+	if item.OrgID != orgID || item.BenchmarkID != benchmarkID {
+		return nil, ErrNotFound
+	}
+
 	return s.mapItemToResponse(item), nil
 }
 
-// Update atualiza o payload
 func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *dto.UpdateVarConfigRequest) (*dto.VarConfigResponse, error) {
-	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
-	sk := fmt.Sprintf("VARCONFIG#%s", id)
+	if orgID == "" || benchmarkID == "" || id == "" {
+		return nil, ErrInvalidInput
+	}
 
-	existing, err := s.repository.GetByID(ctx, pk, sk)
+	// Converter ID string para int64
+	var intID int64
+	if _, err := fmt.Sscan(id, &intID); err != nil {
+		return nil, fmt.Errorf("invalid id format: %w", err)
+	}
+
+	// Verificar que o item existe e pertence aos IDs fornecidos
+	existing, err := s.repository.GetByID(ctx, intID)
 	if err != nil {
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
@@ -104,42 +109,61 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 		return nil, ErrNotFound
 	}
 
-	existing.Payload = input.Payload
-	existing.UpdatedAt = time.Now().Format(time.RFC3339)
+	if existing.OrgID != orgID || existing.BenchmarkID != benchmarkID {
+		return nil, ErrNotFound
+	}
 
-	if err := s.repository.Update(ctx, existing); err != nil {
+	// Atualizar payload
+	item, err := s.repository.Update(ctx, intID, input.Payload)
+	if err != nil {
 		return nil, fmt.Errorf("update error: %w", err)
 	}
 
-	return s.mapItemToResponse(existing), nil
+	return s.mapItemToResponse(item), nil
 }
 
-// Delete remove via chaves compostas
 func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) error {
-	pk := fmt.Sprintf("ORG#%s#BENCH#%s", orgID, benchmarkID)
-	sk := fmt.Sprintf("VARCONFIG#%s", id)
-
-	return s.repository.Delete(ctx, pk, sk)
-}
-
-func (s *Service) mapItemToResponse(item *models.VarConfigItem) *dto.VarConfigResponse {
-	return &dto.VarConfigResponse{
-		ID:          item.ID,
-		OrgID:       item.OrgID,
-		BenchmarkID: item.BenchmarkID,
-		Payload:     item.Payload,
-		CreatedAt:   item.CreatedAt,
-		UpdatedAt:   item.UpdatedAt,
+	if orgID == "" || benchmarkID == "" || id == "" {
+		return ErrInvalidInput
 	}
+
+	// Converter ID string para int64
+	var intID int64
+	if _, err := fmt.Sscan(id, &intID); err != nil {
+		return fmt.Errorf("invalid id format: %w", err)
+	}
+
+	// Verificar que o item existe e pertence aos IDs fornecidos
+	existing, err := s.repository.GetByID(ctx, intID)
+	if err != nil {
+		return fmt.Errorf("repository error: %w", err)
+	}
+	if existing == nil {
+		return ErrNotFound
+	}
+
+	if existing.OrgID != orgID || existing.BenchmarkID != benchmarkID {
+		return ErrNotFound
+	}
+
+	return s.repository.Delete(ctx, intID)
 }
 
-func (s *Service) mapListItemToResponse(item *models.VarConfigListItem) *dto.VarConfigResponse {
+// mapItemToResponse converte VarConfigPostgreSQL para VarConfigResponse
+func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.VarConfigResponse {
+	var payload map[string]any
+	if item.Payload != nil {
+		if err := json.Unmarshal(item.Payload, &payload); err != nil {
+			payload = nil
+		}
+	}
+
 	return &dto.VarConfigResponse{
-		ID:          item.ID,
+		ID:          fmt.Sprintf("%d", item.ID),
 		OrgID:       item.OrgID,
 		BenchmarkID: item.BenchmarkID,
-		Payload:     nil, // Payload não disponível na listagem
-		CreatedAt:   item.CreatedAt,
-		UpdatedAt:   item.UpdatedAt,
+		Payload:     payload,
+		CreatedAt:   item.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   item.UpdatedAt.Format(time.RFC3339),
 	}
 }

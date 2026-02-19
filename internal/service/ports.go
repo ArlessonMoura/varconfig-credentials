@@ -6,50 +6,33 @@ import (
 	modelConfig "projeto-crud-credentials/pkg/models/config"
 )
 
-// IVarConfigRepository define o contrato de persistência.
-// O Service chama estes métodos passando as chaves já formatadas (PK e SK).
+// IVarConfigRepository define o contrato de persistência para VarConfig no PostgreSQL.
+// O Service trabalha com domínio relacional (ID, orgID, benchmarkID, payload).
 type IVarConfigRepository interface {
-	// CREATE (PutItem do DynamoDB)
-	Create(ctx context.Context, item *modelConfig.VarConfigItem) error
+	// Create persiste um novo VarConfig e retorna o item criado com ID atribuído
+	Create(ctx context.Context, orgID string, benchmarkID string, payload map[string]any) (*modelConfig.VarConfigPostgreSQL, error)
 
-	// List retorna apenas campos essenciais para listagem (sem payload pesado)
-	List(ctx context.Context, pk string) ([]*modelConfig.VarConfigListItem, error)
-	
-	// GetByID busca um item específico pela PK e SK
-	GetByID(ctx context.Context, pk string, sk string) (*modelConfig.VarConfigItem, error)
+	// List retorna todas as configurações para um dado org_id e benchmark_id
+	List(ctx context.Context, orgID string, benchmarkID string) ([]*modelConfig.VarConfigPostgreSQL, error)
 
-	// UPDATE (PutItem do DynamoDB)
-	Update(ctx context.Context, item *modelConfig.VarConfigItem) error
+	// GetByID busca um item específico pelo ID
+	GetByID(ctx context.Context, id int64) (*modelConfig.VarConfigPostgreSQL, error)
 
-	// Delete remove o item via chaves compostas
-	Delete(ctx context.Context, pk string, sk string) error
+	// Update atualiza o payload de um VarConfig
+	Update(ctx context.Context, id int64, payload map[string]any) (*modelConfig.VarConfigPostgreSQL, error)
+
+	// Delete remove um item pelo ID
+	Delete(ctx context.Context, id int64) error
 }
 
-
-
-// -------------------------------------------------
-
-
-// IRelationalRepository define o contrato para persistência relacional (PostgreSQL)
-type IRelationalRepository interface {
+// IBenchmarkRepository define o contrato para persistência relacional (PostgreSQL)
+type IBenchmarkRepository interface {
 	Create(ctx context.Context, schema *modelBenchmark.BenchmarkSchemaPostgreSQL) error
-	// Delete remove o registro em caso de falha no Dynamo (Rollback)
+	// List retorna todos os schemas (inclui schema_body)
+	List(ctx context.Context) ([]*modelBenchmark.BenchmarkSchemaPostgreSQL, error)
+	// GetByID busca um schema pelo ID (int64)
+	GetByID(ctx context.Context, id int64) (*modelBenchmark.BenchmarkSchemaPostgreSQL, error)
+	// Delete remove o registro
 	Delete(ctx context.Context, id *int64) error
 }
 
-// INoSQLRepository define o contrato para persistência NoSQL genérica
-type INoSQLRepository interface {
-	Create(ctx context.Context, item *modelBenchmark.BenchmarkSchemaDynamoDB) error
-	
-	// List retorna apenas campos essenciais para listagem (sem schema_body pesado)
-	List(ctx context.Context) ([]*modelBenchmark.BenchmarkSchemaListDynamoDB, error)			
-	//Na verdade lista pelo PK
-	GetByID(ctx context.Context, id string) (*modelBenchmark.BenchmarkSchemaDynamoDB, error)
-
-
-// 	// ===========
-
-// 	// ===========
-// 	Update(ctx context.Context, item *modelBenchmark.BenchmarkSchemaDynamoDB) error
-// 	Delete(ctx context.Context, id string) error
-}

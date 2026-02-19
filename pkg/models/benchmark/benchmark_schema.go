@@ -1,13 +1,17 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // BenchmarkSchemaPostgreSQL representa o schema no banco relacional PostgreSQL
 type BenchmarkSchemaPostgreSQL struct {
 	ID        int64     `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name      string    `gorm:"not null" json:"name"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	Schema    json.RawMessage `gorm:"type:jsonb;column:schema_body" json:"schema_body"`
+	CreatedAt time.Time       `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (BenchmarkSchemaPostgreSQL) TableName() string {
@@ -27,16 +31,4 @@ type BenchmarkSchemaCreateRequest struct {
 // 	SchemaBody map[string]string `json:"schema_body"`
 // }
 
-// BenchmarkSchemaDynamoDB representa o schema completo no DynamoDB
-type BenchmarkSchemaDynamoDB struct {
-	PK         string            `dynamodbav:"PK"` // SCHEMA#<id>
-	ID         string            `dynamodbav:"ID"` // O ID vindo do Relacional (como string)
-	SchemaBody map[string]string `dynamodbav:"schema_body"`
-	CreatedAt  string            `dynamodbav:"created_at"`
-}
-
-// BenchmarkSchemaListDynamoDB representa os campos essenciais para listagem no DynamoDB (sem o schema_body pesado)
-type BenchmarkSchemaListDynamoDB struct {
-	ID        string `dynamodbav:"ID"`
-	CreatedAt string `dynamodbav:"created_at"`
-}
+// DynamoDB artifacts removed — benchmark schemas are stored in Postgres (jsonb).

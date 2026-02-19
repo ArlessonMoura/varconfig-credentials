@@ -13,9 +13,10 @@ import (
 	hconfig "projeto-crud-credentials/pkg/handler/domain/core/config"
 	"projeto-crud-credentials/routes"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	_ "github.com/lib/pq"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func Bootstrap() {
@@ -38,26 +39,14 @@ func Bootstrap() {
 		log.Fatalf("Erro ao validar conexão PostgreSQL: %v", err)
 	}
 
-	// 2. Conectar ao DynamoDB
-	cfg, err := config.LoadDefaultConfig(ctx)
+	// Inicializa GORM usando a conexão sql.DB
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Erro ao carregar configuração AWS: %v", err)
+		log.Fatalf("Erro ao inicializar GORM: %v", err)
 	}
 
-	client := dynamodb.NewFromConfig(cfg)
-
-	tableName := os.Getenv("DYNAMODB_TABLE_VARCONFIG")
-	if tableName == "" {
-		log.Fatal("Erro: Variável de ambiente DYNAMODB_TABLE_VARCONFIG nao configurada")
-	}
-
-	benchmarkSchemaTableName := os.Getenv("DYNAMODB_TABLE_BENCHMARK_SCHEMA")
-	if benchmarkSchemaTableName == "" {
-		log.Fatal("Erro: Variável de ambiente DYNAMODB_TABLE_BENCHMARK_SCHEMA nao configurada")
-	}
-
-	varConfigHandler := hconfig.InitHandler(client, tableName)
-	benchmarkSchemaHandler := hbenchmark.InitHandler(sqlDB, client, benchmarkSchemaTableName)
+	varConfigHandler := hconfig.InitHandler(gormDB)
+	benchmarkSchemaHandler := hbenchmark.InitHandler(gormDB)
 
 	router := routes.SetupRouter(varConfigHandler, benchmarkSchemaHandler)
 

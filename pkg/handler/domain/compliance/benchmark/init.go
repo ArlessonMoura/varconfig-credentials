@@ -1,19 +1,16 @@
 package benchmark
 
 import (
-	"database/sql"
 	service "projeto-crud-credentials/internal/service/domain/compliance/benchmark"
-	dynamodbRepo "projeto-crud-credentials/internal/storage/dynamodb/benchmark"
 	postgresRepo "projeto-crud-credentials/internal/storage/postgres/benchmark"
 
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"gorm.io/gorm"
 )
 
-func InitHandler(postgresDB *sql.DB, client *dynamodb.Client, tableName string) *Handler {
-	relationalRepo := postgresRepo.NewRepository(postgresDB)
-	nosqlRepo := dynamodbRepo.NewRepository(client, tableName)
+func InitHandler(gormDB *gorm.DB) *Handler {
+	relationalRepo := postgresRepo.NewRepository(gormDB)
 
-	serviceImpl := service.NewService(relationalRepo, nosqlRepo)
+	serviceImpl := service.NewService(relationalRepo)
 
 	return NewHandler(serviceImpl)
 }

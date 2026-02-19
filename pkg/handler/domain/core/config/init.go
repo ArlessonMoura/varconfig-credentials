@@ -3,15 +3,15 @@ package config
 import (
 	// Aliases para evitar confusão entre pacotes de mesmo nome
 	service "projeto-crud-credentials/internal/service/domain/core/config"
-	storage "projeto-crud-credentials/internal/storage/dynamodb/config"
+	storage "projeto-crud-credentials/internal/storage/postgres/config"
 
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"gorm.io/gorm"
 )
 
 // InitHandler inicializa o handler com todas as dependências (Wiring)
-func InitHandler(client *dynamodb.Client, tableName string) *Handler {
-	// 1. Instancia o repository (Implementação do Driver DynamoDB)
-	repositoryImpl := storage.NewRepository(client, tableName)
+func InitHandler(db *gorm.DB) *Handler {
+	// 1. Instancia o repository (Implementação do Driver PostgreSQL com GORM)
+	repositoryImpl := storage.NewRepository(db)
 
 	// 2. Instancia o service injetando o repository
 	// O serviceImpl deve implementar a interface IVarConfigService definida neste pacote
