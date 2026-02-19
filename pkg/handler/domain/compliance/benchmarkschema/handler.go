@@ -2,7 +2,7 @@ package benchmarkschema
 
 import (
 	"net/http"
-	ports "projeto-crud-credencials/pkg/handler"
+	ports "projeto-crud-credentials/pkg/handler"
 
 	"github.com/gin-gonic/gin"
 )

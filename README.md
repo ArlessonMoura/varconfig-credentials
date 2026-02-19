@@ -212,7 +212,7 @@ go test ./internal/service/domain/varconfig/... -run Contract
 ## 🔧 Estrutura do Projeto
 
 ```
-projeto-crud-credencials/
+projeto-crud-credentials/
 ├── 📚 DOCUMENTAÇÃO
 │   ├── README.md                    # Este arquivo
 │   ├── DYNAMODB_SCHEMA.md           # Schema detalhado

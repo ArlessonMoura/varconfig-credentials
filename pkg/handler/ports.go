@@ -2,8 +2,8 @@ package handler
 
 import (
 	"context"
-	dtoSchema "projeto-crud-credencials/dto/benchmarkschema"
-	dto "projeto-crud-credencials/dto/varconfig"
+	dtoSchema "projeto-crud-credentials/dto/benchmarkschema"
+	dto "projeto-crud-credentials/dto/varconfig"
 )
 
 

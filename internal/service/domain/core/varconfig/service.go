@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ports "projeto-crud-credencials/internal/service"
+	ports "projeto-crud-credentials/internal/service"
 	"time"
 
-	dto "projeto-crud-credencials/dto/varconfig"
-	models "projeto-crud-credencials/pkg/models/varconfig"
+	dto "projeto-crud-credentials/dto/varconfig"
+	models "projeto-crud-credentials/pkg/models/varconfig"
 )
 
 // Package varconfig provides domain services for managing variable configurations.

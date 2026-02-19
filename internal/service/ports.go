@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	benchmarkModels "projeto-crud-credencials/pkg/models/benchmarkschema"
-	varConfigModels "projeto-crud-credencials/pkg/models/varconfig"
+	benchmarkModels "projeto-crud-credentials/pkg/models/benchmarkschema"
+	varConfigModels "projeto-crud-credentials/pkg/models/varconfig"
 )
 
 // IVarConfigRepository define o contrato de persistência.

@@ -1,4 +1,4 @@
-module projeto-crud-credencials
+module projeto-crud-credentials
 
 go 1.23.0
 

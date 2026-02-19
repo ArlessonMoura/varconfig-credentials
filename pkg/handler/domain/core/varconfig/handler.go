@@ -2,8 +2,8 @@ package varconfig
 
 import (
 	"net/http"
-	dto "projeto-crud-credencials/dto/varconfig"
-	ports "projeto-crud-credencials/pkg/handler"
+	dto "projeto-crud-credentials/dto/varconfig"
+	ports "projeto-crud-credentials/pkg/handler"
 
 	"github.com/gin-gonic/gin"
 )

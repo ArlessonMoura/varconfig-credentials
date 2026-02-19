@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	models "projeto-crud-credencials/pkg/models/benchmarkschema"
+	models "projeto-crud-credentials/pkg/models/benchmarkschema"
 )
 
 type Repository struct {

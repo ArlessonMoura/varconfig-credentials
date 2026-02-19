@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"projeto-crud-credencials/pkg/handler/domain/compliance/benchmarkschema"
+	"projeto-crud-credentials/pkg/handler/domain/compliance/benchmarkschema"
 
 	"github.com/gin-gonic/gin"
 )

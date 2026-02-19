@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"projeto-crud-credencials/pkg/handler/domain/core/varconfig"
+	"projeto-crud-credentials/pkg/handler/domain/core/varconfig"
 
 	"github.com/gin-gonic/gin"
 )

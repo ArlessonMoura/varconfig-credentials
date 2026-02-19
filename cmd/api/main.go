@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
-	handlerbenchmarkschema "projeto-crud-credencials/pkg/handler/domain/compliance/benchmarkschema"
-	handlervarconfig "projeto-crud-credencials/pkg/handler/domain/core/varconfig"
-	"projeto-crud-credencials/routes"
+	handlerbenchmarkschema "projeto-crud-credentials/pkg/handler/domain/compliance/benchmarkschema"
+	handlervarconfig "projeto-crud-credentials/pkg/handler/domain/core/varconfig"
+	"projeto-crud-credentials/routes"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"

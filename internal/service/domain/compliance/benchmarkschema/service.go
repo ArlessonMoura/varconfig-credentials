@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	dto "projeto-crud-credencials/dto/benchmarkschema"
-	ports "projeto-crud-credencials/internal/service"
-	models "projeto-crud-credencials/pkg/models/benchmarkschema"
+	dto "projeto-crud-credentials/dto/benchmarkschema"
+	ports "projeto-crud-credentials/internal/service"
+	models "projeto-crud-credentials/pkg/models/benchmarkschema"
 )
 
 var (

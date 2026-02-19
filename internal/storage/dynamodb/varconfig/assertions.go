@@ -1,7 +1,7 @@
 package varconfig
 
 import (
-	repoVarconfig "projeto-crud-credencials/internal/service"
+	repoVarconfig "projeto-crud-credentials/internal/service"
 )
 
 // assertions garante que Repository implementa a interface IVarConfigRepository
