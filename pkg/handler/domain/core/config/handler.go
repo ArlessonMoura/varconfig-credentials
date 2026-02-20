@@ -43,7 +43,13 @@ func (h *Handler) Create(c *gin.Context) {
 	// O Service recebe os IDs da URL + o Payload do Body
 	result, err := h.svc.Create(c.Request.Context(), orgID, benchmarkID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		
+		errMsg := err.Error()
+		if len(errMsg) > 17 && errMsg[:17] == "validation error:" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsg})
 		return
 	}
 
@@ -123,7 +129,13 @@ func (h *Handler) Update(c *gin.Context) {
 
 	result, err := h.svc.Update(c.Request.Context(), orgID, benchmarkID, id, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		
+		errMsg := err.Error()
+		if len(errMsg) > 17 && errMsg[:17] == "validation error:" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsg})
 		return
 	}
 
