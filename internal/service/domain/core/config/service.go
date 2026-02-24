@@ -33,7 +33,7 @@ func NewService(repository ports.IVarConfigRepository, benchmarkRepo ports.IBenc
 }
 
 // Create cria um novo VarConfig com ID gerado automaticamente pelo PostgreSQL
-func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *dto.CreateVarConfigRequest) (*dto.VarConfigResponse, error) {
+func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *dto.ConfigCreateRequestDTO) (*dto.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
 	}
@@ -52,7 +52,7 @@ func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, 
 }
 
 // List retorna todas as configurações de benchmark (versão leve sem payload)
-func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.ListVarConfigsResponse, error) {
+func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.ConfigListAllResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
 	}
@@ -62,9 +62,9 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Lis
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
-	var data []dto.ListVarConfigResponse
+	var data []dto.ConfigListResponseDTO
 	for _, item := range items {
-		data = append(data, dto.ListVarConfigResponse{
+		data = append(data, dto.ConfigListResponseDTO{
 			ID:          fmt.Sprintf("%d", item.ID),
 			OrgID:       item.OrgID,
 			BenchmarkID: item.BenchmarkID,
@@ -73,11 +73,11 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Lis
 		})
 	}
 
-	return &dto.ListVarConfigsResponse{Data: data}, nil
+	return &dto.ConfigListAllResponseDTO{Data: data}, nil
 }
 
 // GetByID retorna todas as configurações de um benchmark específico
-func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*dto.VarConfigResponse, error) {
+func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*dto.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
 		return nil, ErrInvalidInput
 	}
@@ -104,7 +104,7 @@ func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*
 	return s.mapItemToResponse(item), nil
 }
 
-func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *dto.UpdateVarConfigRequest) (*dto.VarConfigResponse, error) {
+func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *dto.ConfigUpdateRequestDTO) (*dto.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
 		return nil, ErrInvalidInput
 	}
@@ -170,7 +170,7 @@ func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) err
 }
 
 // mapItemToResponse converte VarConfigPostgreSQL para VarConfigResponse
-func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.VarConfigResponse {
+func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.ConfigResponseDTO {
 	var payload map[string]any
 	if item.Payload != nil {
 		if err := json.Unmarshal(item.Payload, &payload); err != nil {
@@ -178,7 +178,7 @@ func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.VarCo
 		}
 	}
 
-	return &dto.VarConfigResponse{
+	return &dto.ConfigResponseDTO{
 		ID:          fmt.Sprintf("%d", item.ID),
 		OrgID:       item.OrgID,
 		BenchmarkID: item.BenchmarkID,

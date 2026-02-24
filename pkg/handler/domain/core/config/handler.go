@@ -18,12 +18,11 @@ func NewHandler(svc ports.IVarConfigService) *Handler {
 	}
 }
 
-
 func (h *Handler) Create(c *gin.Context) {
 	orgID := c.Param("orgId")
 	benchmarkID := c.Param("benchmark_id")
 
-	var req dto.CreateVarConfigRequest
+	var req dto.ConfigCreateRequestDTO
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido: " + err.Error()})
 		return
@@ -43,7 +42,7 @@ func (h *Handler) Create(c *gin.Context) {
 	// O Service recebe os IDs da URL + o Payload do Body
 	result, err := h.svc.Create(c.Request.Context(), orgID, benchmarkID, &req)
 	if err != nil {
-		
+
 		errMsg := err.Error()
 		if len(errMsg) > 17 && errMsg[:17] == "validation error:" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})
@@ -55,7 +54,6 @@ func (h *Handler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, result)
 }
-
 
 func (h *Handler) List(c *gin.Context) {
 	orgID := c.Param("orgId")
@@ -80,8 +78,6 @@ func (h *Handler) List(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
-
-
 
 func (h *Handler) GetByID(c *gin.Context) {
 	orgID := c.Param("orgId")
@@ -109,7 +105,7 @@ func (h *Handler) Update(c *gin.Context) {
 	benchmarkID := c.Param("benchmark_id")
 	id := c.Param("id")
 
-	var req dto.UpdateVarConfigRequest
+	var req dto.ConfigUpdateRequestDTO
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -129,7 +125,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	result, err := h.svc.Update(c.Request.Context(), orgID, benchmarkID, id, &req)
 	if err != nil {
-		
+
 		errMsg := err.Error()
 		if len(errMsg) > 17 && errMsg[:17] == "validation error:" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})

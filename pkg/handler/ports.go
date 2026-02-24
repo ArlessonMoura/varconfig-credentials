@@ -6,17 +6,16 @@ import (
 	dtoConfig "projeto-crud-credentials/dto/config"
 )
 
-
 type IVarConfigService interface {
-	//CREATE	
-	Create(ctx context.Context, orgID string, benchmarkID string, input *dtoConfig.CreateVarConfigRequest) (*dtoConfig.VarConfigResponse, error)
+	//CREATE
+	Create(ctx context.Context, orgID string, benchmarkID string, input *dtoConfig.ConfigCreateRequestDTO) (*dtoConfig.ConfigResponseDTO, error)
 
 	//READ
-	List(ctx context.Context, orgID string, benchmarkID string) (*dtoConfig.ListVarConfigsResponse, error)
-	GetByID(ctx context.Context, orgID string, benchmarkID string, id string) (*dtoConfig.VarConfigResponse, error)
+	List(ctx context.Context, orgID string, benchmarkID string) (*dtoConfig.ConfigListAllResponseDTO, error)
+	GetByID(ctx context.Context, orgID string, benchmarkID string, id string) (*dtoConfig.ConfigResponseDTO, error)
 
 	//UPDATE
-	Update(ctx context.Context, orgID string, benchmarkID string, id string, input *dtoConfig.UpdateVarConfigRequest) (*dtoConfig.VarConfigResponse, error)
+	Update(ctx context.Context, orgID string, benchmarkID string, id string, input *dtoConfig.ConfigUpdateRequestDTO) (*dtoConfig.ConfigResponseDTO, error)
 
 	//DELETE
 	Delete(ctx context.Context, orgID string, benchmarkID string, id string) error
@@ -24,9 +23,9 @@ type IVarConfigService interface {
 
 type IBenchmarkSchemaService interface {
 	//CREATE
-	Create(ctx context.Context, name string, schemaRequest *dtoBenchmark.CreateBenchmarkSchemaRequest) (dtoBenchmark.CreateBenchmarkSchemaResponse, error)
-	
+	Create(ctx context.Context, name string, schemaRequest *dtoBenchmark.BenchmarkCreateRequestDTO) (dtoBenchmark.BenchmarkCreateResponseDTO, error)
+
 	//READ
-	List(ctx context.Context) (*dtoBenchmark.ListBenchmarkSchemasResponse, error)
-	GetByID(ctx context.Context, id string) (*dtoBenchmark.BenchmarkSchemaResponse, error)
-	}
+	List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponseDTO, error)
+	GetByID(ctx context.Context, id string) (*dtoBenchmark.BenchmarkResponseDTO, error)
+}

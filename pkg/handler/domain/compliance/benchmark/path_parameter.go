@@ -19,7 +19,7 @@ func (pp *PathParameter) Validate() error {
 	if err := validateRequiredString(pp.BenchmarkID, "benchmarkId"); err != nil {
 		return err
 	}
-	
+
 	// Validate schemaId if present
 	if pp.SchemaID != "" {
 		if err := validateRequiredString(pp.SchemaID, "id"); err != nil {
@@ -29,7 +29,7 @@ func (pp *PathParameter) Validate() error {
 			return errors.New("id inválido")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -44,7 +44,7 @@ func validateRequiredString(value, paramName string) error {
 // ValidateBenchmarkID validates the benchmark ID parameter
 func ValidateBenchmarkID(c *gin.Context) (string, bool) {
 	benchmarkID := strings.TrimSpace(c.Param("benchmarkId"))
-	
+
 	if benchmarkID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Bad request",
@@ -52,22 +52,22 @@ func ValidateBenchmarkID(c *gin.Context) (string, bool) {
 		})
 		return "", false
 	}
-	
+
 	return benchmarkID, true
 }
 
 // ValidateSchemaID validates the schema ID parameter
 func ValidateSchemaID(c *gin.Context) (string, bool) {
 	schemaID := strings.TrimSpace(c.Param("id"))
-	
+
 	if schemaID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Bad request", 
+			"error":   "Bad request",
 			"details": "id parameter is required and cannot be empty",
 		})
 		return "", false
 	}
-	
+
 	if strings.Contains(schemaID, " ") {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Bad request",
@@ -75,6 +75,6 @@ func ValidateSchemaID(c *gin.Context) (string, bool) {
 		})
 		return "", false
 	}
-	
+
 	return schemaID, true
 }
