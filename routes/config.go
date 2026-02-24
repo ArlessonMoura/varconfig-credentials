@@ -1,13 +1,13 @@
 package routes
 
 import (
-	"projeto-crud-credencials/pkg/handler/domain/core/varconfig"
+	"projeto-crud-credentials/pkg/handler/domain/core/config"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupVarConfigRoutes registra as rotas de VarConfig seguindo a especificação do projeto
-func SetupVarConfigRoutes(router *gin.Engine, h *varconfig.Handler) {
+func SetupVarConfigRoutes(router *gin.Engine, h *config.Handler) {
 
 	// Agrupamento base para evitar repetição de prefixos
 	group := router.Group("/org/:orgId/compliance/variables/:benchmark_id")

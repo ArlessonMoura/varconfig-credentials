@@ -1,16 +1,16 @@
 package routes
 
 import (
-	benchmarkSchema "projeto-crud-credencials/pkg/handler/domain/compliance/benchmark_schema"
-	varconfig "projeto-crud-credencials/pkg/handler/domain/core/varconfig"
+	"projeto-crud-credentials/pkg/handler/domain/compliance/benchmark"
+	"projeto-crud-credentials/pkg/handler/domain/core/config"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(h *varconfig.Handler, bsHandler *benchmarkSchema.Handler) *gin.Engine {
+func SetupRouter(hConfig *config.Handler, hBench *benchmark.Handler) *gin.Engine {
 	router := gin.Default()
-	SetupVarConfigRoutes(router, h)
-	SetupBenchmarkSchemaRoutes(router, bsHandler)
+	SetupVarConfigRoutes(router, hConfig)
+	SetupBenchmarkSchemaRoutes(router, hBench)
 
 	return router
 }

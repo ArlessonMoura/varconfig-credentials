@@ -1,8 +1,8 @@
-package benchmark_schema
+package benchmark
 
 import (
 	"net/http"
-	ports "projeto-crud-credencials/pkg/handler"
+	ports "projeto-crud-credentials/pkg/handler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,20 +19,29 @@ func NewHandler(svc ports.IBenchmarkSchemaService) *Handler {
 
 // GetByID retorna um schema específico pelo benchmarkId
 func (h *Handler) GetByID(c *gin.Context) {
-	benchmarkID, isValid := ValidateBenchmarkID(c)
-	if !isValid {
+	benchmarkID := c.Param("benchmarkId")
+	
+	// Validação usando o novo método Validate
+	pathParam := &PathParameter{
+		BenchmarkID: benchmarkID,
+	}
+	if err := pathParam.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Bad request",
+			"details": err.Error(),
+		})
 		return
 	}
 
 	schema, err := h.svc.GetByID(c.Request.Context(), benchmarkID)
 	if err != nil {
-		// if errors.Is(err, errors.New("schema not found")) {
-		// 	c.JSON(http.StatusNotFound, gin.H{
-		// 		"error":   "Schema not found",
-		// 		"details": "No benchmark schema found with the provided ID",
-		// 	})
-		// 	return
-		// }
+		if err.Error() == "schema not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "Schema not found",
+				"details": err.Error(),
+			})
+			return
+		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal server error",

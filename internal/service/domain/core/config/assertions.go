@@ -1,10 +1,10 @@
-package varconfig
+package config
 
 // Service assertions são verificados nos testes unitários
 // para evitar ciclos de importação
 
 import (
-	svcvarconfig "projeto-crud-credencials/pkg/handler"
+	svcvarconfig "projeto-crud-credentials/pkg/handler"
 )
 
 // assertions garante que Service implementa a interface IVarConfigService
