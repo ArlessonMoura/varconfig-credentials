@@ -7,10 +7,10 @@ import (
 )
 
 type PathParameter struct {
-	Payload map[string]any `json:"payload" binding:"required"`
-	OrgID    string       `json:"org_id"`
-	BenchmarkID string       `json:"benchmark_id"`
-	ID        string       `json:"id"`
+	Payload     map[string]any `json:"payload" binding:"required"`
+	OrgID       string         `json:"org_id"`
+	BenchmarkID string         `json:"benchmark_id"`
+	ID          string         `json:"id"`
 }
 
 // Validate validates the PathParameter struct
@@ -21,17 +21,17 @@ func (pp *PathParameter) Validate() error {
 			return errors.New("payload não pode estar vazio")
 		}
 	}
-	
+
 	// Validate orgId
 	if err := validateRequiredString(pp.OrgID, "orgId"); err != nil {
 		return err
 	}
-	
+
 	// Validate benchmarkId
 	if err := validateRequiredString(pp.BenchmarkID, "benchmark_id"); err != nil {
 		return err
 	}
-	
+
 	// Validate id if present
 	if pp.ID != "" {
 		if err := validateRequiredString(pp.ID, "id"); err != nil {
@@ -41,7 +41,7 @@ func (pp *PathParameter) Validate() error {
 			return errors.New("id inválido")
 		}
 	}
-	
+
 	return nil
 }
 

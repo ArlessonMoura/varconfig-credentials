@@ -26,20 +26,20 @@ func NewService(relationalRepo ports.IBenchmarkRepository) *Service {
 	return &Service{relationalRepo: relationalRepo}
 }
 
-func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.CreateBenchmarkSchemaRequest) (dto.CreateBenchmarkSchemaResponse, error) {
+func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (dto.BenchmarkCreateResponseDTO, error) {
 	// Validações
 	if name == "" {
-		return dto.CreateBenchmarkSchemaResponse{}, ErrInvalidInput
+		return dto.BenchmarkCreateResponseDTO{}, ErrInvalidInput
 	}
 
 	if len(schemaRequest.Schema) == 0 {
-		return dto.CreateBenchmarkSchemaResponse{}, ErrEmptySchema
+		return dto.BenchmarkCreateResponseDTO{}, ErrEmptySchema
 	}
 
 	// Marshal full schema definition into JSON and store in jsonb column
 	schemaJSON, err := json.Marshal(schemaRequest.Schema)
 	if err != nil {
-		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to marshal schema: %w", err)
+		return dto.BenchmarkCreateResponseDTO{}, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
 	postgresSchema := &models.BenchmarkSchemaPostgreSQL{
@@ -48,10 +48,10 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Cr
 	}
 
 	if err := s.relationalRepo.Create(ctx, postgresSchema); err != nil {
-		return dto.CreateBenchmarkSchemaResponse{}, fmt.Errorf("failed to create schema in relational db: %w", err)
+		return dto.BenchmarkCreateResponseDTO{}, fmt.Errorf("failed to create schema in relational db: %w", err)
 	}
 
-	return dto.CreateBenchmarkSchemaResponse{
+	return dto.BenchmarkCreateResponseDTO{
 		ID:        fmt.Sprintf("%d", postgresSchema.ID),
 		Name:      name,
 		CreatedAt: postgresSchema.CreatedAt.Format(time.RFC3339),
@@ -59,19 +59,19 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Cr
 }
 
 // List recupera todos os schemas disponíveis (versão enxuta sem SchemaBody)
-func (s *Service) List(ctx context.Context) (*dto.ListBenchmarkSchemasResponse, error) {
+func (s *Service) List(ctx context.Context) (*dto.BenchmarkListResponseDTO, error) {
 	items, err := s.relationalRepo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list schemas from repository: %w", err)
 	}
 
 	if items == nil {
-		return &dto.ListBenchmarkSchemasResponse{Data: []dto.BenchmarkSchemaResponse{}, Count: 0}, nil
+		return &dto.BenchmarkListResponseDTO{Data: []dto.BenchmarkResponseDTO{}, Count: 0}, nil
 	}
 
-	var data []dto.BenchmarkSchemaResponse
+	var data []dto.BenchmarkResponseDTO
 	for _, item := range items {
-		data = append(data, dto.BenchmarkSchemaResponse{
+		data = append(data, dto.BenchmarkResponseDTO{
 			ID:         fmt.Sprintf("%d", item.ID),
 			Name:       item.Name,
 			SchemaBody: nil,
@@ -79,14 +79,14 @@ func (s *Service) List(ctx context.Context) (*dto.ListBenchmarkSchemasResponse, 
 		})
 	}
 
-	return &dto.ListBenchmarkSchemasResponse{
+	return &dto.BenchmarkListResponseDTO{
 		Data:  data,
 		Count: len(data),
 	}, nil
 }
 
 // GetByID busca um schema pelo ID
-func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaResponse, error) {
+func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkResponseDTO, error) {
 	// id vem como string (do handler). Converter para int64
 	var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
@@ -109,7 +109,7 @@ func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkSchemaR
 
 	schemaBody := convertSchemaBodyToStringMap(schemaDef)
 
-	return &dto.BenchmarkSchemaResponse{
+	return &dto.BenchmarkResponseDTO{
 		ID:         fmt.Sprintf("%d", item.ID),
 		Name:       item.Name,
 		SchemaBody: schemaBody,
