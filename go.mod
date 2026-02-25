@@ -10,8 +10,6 @@ require (
 )
 
 require (
-	github.com/Wizzi-Cloud/apperror v0.0.0-20250403183749-2c2523e95aaf // indirect
-	github.com/Wizzi-Cloud/restwrapper v0.0.0-20250513191412-fb1094b3a549 // indirect
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
