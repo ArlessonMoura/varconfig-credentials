@@ -41,7 +41,9 @@ func (r *Repository) Create(ctx context.Context, orgID, benchmarkID string, payl
 func (r *Repository) List(ctx context.Context, orgID, benchmarkID string) ([]*models.VarConfigPostgreSQL, error) {
 	var items []*models.VarConfigPostgreSQL
 
+	// Selecionar apenas os campos necessários (sem payload) para reduzir transferência de dados
 	if err := r.db.WithContext(ctx).
+		Select("id", "org_id", "benchmark_id", "created_at", "updated_at").
 		Where("org_id = ? AND benchmark_id = ?", orgID, benchmarkID).
 		Order("created_at DESC").
 		Find(&items).Error; err != nil {

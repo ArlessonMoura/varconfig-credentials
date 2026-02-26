@@ -29,9 +29,15 @@ func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaP
 
 func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaPostgreSQL, error) {
 	var items []*models.BenchmarkSchemaPostgreSQL
-	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&items).Error; err != nil {
+
+	// Selecionar apenas os campos de metadados para evitar transferência do JSONB (schema_body)
+	if err := r.db.WithContext(ctx).
+		Select("id", "name", "created_at", "updated_at").
+		Order("created_at desc").
+		Find(&items).Error; err != nil {
 		return nil, fmt.Errorf("failed to list benchmark schemas: %w", err)
 	}
+
 	return items, nil
 }
 

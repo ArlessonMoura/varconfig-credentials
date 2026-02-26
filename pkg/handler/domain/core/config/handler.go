@@ -1,11 +1,12 @@
 package config
 
 import (
+	"context"
 	"net/http"
 	dto "projeto-crud-credentials/dto/config"
 	ports "projeto-crud-credentials/pkg/handler"
 
-	"github.com/gin-gonic/gin"
+	"github.com/Wizzi-Cloud/restwrapper"
 )
 
 type Handler struct {
@@ -18,138 +19,138 @@ func NewHandler(svc ports.IVarConfigService) *Handler {
 	}
 }
 
-
-func (h *Handler) Create(c *gin.Context) {
-	orgID := c.Param("orgId")
-	benchmarkID := c.Param("benchmark_id")
-
-	var req dto.CreateVarConfigRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido: " + err.Error()})
+// Handle implementa a interface IRestHandler do restwrapper
+func (h *Handler) Handle(wrapper *restwrapper.Wrapper) {
+	// Binding centralizado dos path parameters com validação automática
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Validação adicional do payload
-	pathParam := &PathParameter{
-		Payload:     req.Payload,
-		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
+	method := wrapper.RequestWrapper.Method()
+	switch method {
+	case http.MethodPost:
+		h.Create(wrapper, pathParams)
+	case http.MethodGet:
+		if pathParams.ID != "" {
+			h.GetByID(wrapper, pathParams)
+		} else {
+			h.List(wrapper, pathParams)
+		}
+	case http.MethodPut:
+		h.Update(wrapper, pathParams)
+	case http.MethodDelete:
+		h.Delete(wrapper, pathParams)
+	default:
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusMethodNotAllowed, "method not allowed")
 	}
-	if err := pathParam.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+}
+
+func (h *Handler) Create(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
+
+	var req dto.ConfigCreateRequestDTO
+	if err := wrapper.RequestWrapper.BindBody(&req); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "JSON inválido: "+err.Error())
 		return
 	}
 
 	// O Service recebe os IDs da URL + o Payload do Body
-	result, err := h.svc.Create(c.Request.Context(), orgID, benchmarkID, &req)
+	result, err := h.svc.Create(ctx, pathParams.OrgID, pathParams.BenchmarkID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		errMsg := err.Error()
+		if len(errMsg) > 17 && errMsg[:17] == "validation error:" {
+			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
+			return
+		}
+		wrapper.ResponseWrapper.WriteServerErrorResponse()
 		return
 	}
 
-	c.JSON(http.StatusCreated, result)
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusCreated, result)
 }
 
+func (h *Handler) GetByID(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
 
-func (h *Handler) List(c *gin.Context) {
-	orgID := c.Param("orgId")
-	benchmarkID := c.Param("benchmark_id")
-
-	// Validação dos parâmetros de rota
-	pathParam := &PathParameter{
-		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
-	}
-	if err := pathParam.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Validar ID adicional para garantir que não contém espaços
+	if err := pathParams.Validate(); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Chamada ao svc usando o contrato de DTO de resposta
-	result, err := h.svc.List(c.Request.Context(), orgID, benchmarkID)
+	result, err := h.svc.GetByID(ctx, pathParams.OrgID, pathParams.BenchmarkID, pathParams.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusNotFound, "Configuração não encontrada")
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, result)
 }
 
+func (h *Handler) List(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
 
-
-func (h *Handler) GetByID(c *gin.Context) {
-	orgID := c.Param("orgId")
-	benchmarkID := c.Param("benchmark_id")
-	id := c.Param("id")
-
-	// Validação dos parâmetros de rota
-	if err := ValidatePathParams(orgID, benchmarkID, id); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	result, err := h.svc.GetByID(c.Request.Context(), orgID, benchmarkID, id)
+	result, err := h.svc.List(ctx, pathParams.OrgID, pathParams.BenchmarkID)
 	if err != nil {
-		// Em produção, aqui usaríamos o mapeamento de erros do internal/common
-		c.JSON(http.StatusNotFound, gin.H{"error": "Configuração não encontrada"})
+		wrapper.ResponseWrapper.WriteServerErrorResponse()
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, result)
 }
 
-func (h *Handler) Update(c *gin.Context) {
-	orgID := c.Param("orgId")
-	benchmarkID := c.Param("benchmark_id")
-	id := c.Param("id")
+func (h *Handler) Update(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
 
-	var req dto.UpdateVarConfigRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if pathParams.ID == "" {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id is required for update")
 		return
 	}
 
-	// Validação adicional do payload
-	pathParam := &PathParameter{
-		Payload:     req.Payload,
-		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
-		ID:          id,
-	}
-	if err := pathParam.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req dto.ConfigUpdateRequestDTO
+	if err := wrapper.RequestWrapper.BindBody(&req); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	result, err := h.svc.Update(c.Request.Context(), orgID, benchmarkID, id, &req)
+	if err := pathParams.Validate(); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := h.svc.Update(ctx, pathParams.OrgID, pathParams.BenchmarkID, pathParams.ID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		errMsg := err.Error()
+		if len(errMsg) > 17 && errMsg[:17] == "validation error:" {
+			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
+			return
+		}
+		wrapper.ResponseWrapper.WriteServerErrorResponse()
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, result)
 }
 
-func (h *Handler) Delete(c *gin.Context) {
-	orgID := c.Param("orgId")
-	benchmarkID := c.Param("benchmark_id")
-	id := c.Param("id")
+func (h *Handler) Delete(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
 
-	// Validação dos parâmetros de rota
-	pathParam := &PathParameter{
-		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
-		ID:          id,
-	}
-	if err := pathParam.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if pathParams.ID == "" {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id is required for delete")
 		return
 	}
 
-	if err := h.svc.Delete(c.Request.Context(), orgID, benchmarkID, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := pathParams.Validate(); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusNoContent, nil)
+	if err := h.svc.Delete(ctx, pathParams.OrgID, pathParams.BenchmarkID, pathParams.ID); err != nil {
+		wrapper.ResponseWrapper.WriteServerErrorResponse()
+		return
+	}
+
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusNoContent, nil)
 }

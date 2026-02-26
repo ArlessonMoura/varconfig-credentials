@@ -17,6 +17,9 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	modelBenchmark "projeto-crud-credentials/pkg/models/benchmark"
+	modelConfig "projeto-crud-credentials/pkg/models/config"
 )
 
 func Bootstrap() {
@@ -43,6 +46,11 @@ func Bootstrap() {
 	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Erro ao inicializar GORM: %v", err)
+	}
+
+	// AutoMigrate das tabelas essenciais (benchmark schemas e var_configs)
+	if err := gormDB.AutoMigrate(&modelBenchmark.BenchmarkSchemaPostgreSQL{}, &modelConfig.VarConfigPostgreSQL{}); err != nil {
+		log.Fatalf("Erro ao executar AutoMigrate: %v", err)
 	}
 
 	varConfigHandler := hconfig.InitHandler(gormDB)

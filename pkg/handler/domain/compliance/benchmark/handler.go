@@ -1,10 +1,11 @@
 package benchmark
 
 import (
+	"context"
 	"net/http"
 	ports "projeto-crud-credentials/pkg/handler"
 
-	"github.com/gin-gonic/gin"
+	"github.com/Wizzi-Cloud/restwrapper"
 )
 
 type Handler struct {
@@ -17,52 +18,51 @@ func NewHandler(svc ports.IBenchmarkSchemaService) *Handler {
 	}
 }
 
-// GetByID retorna um schema específico pelo benchmarkId
-func (h *Handler) GetByID(c *gin.Context) {
-	benchmarkID := c.Param("benchmarkId")
-	
-	// Validação usando o novo método Validate
-	pathParam := &PathParameter{
-		BenchmarkID: benchmarkID,
-	}
-	if err := pathParam.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Bad request",
-			"details": err.Error(),
-		})
+// Handle implementa a interface IRestHandler do restwrapper
+func (h *Handler) Handle(wrapper *restwrapper.Wrapper) {
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	schema, err := h.svc.GetByID(c.Request.Context(), benchmarkID)
-	if err != nil {
-		if err.Error() == "schema not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   "Schema not found",
-				"details": err.Error(),
-			})
-			return
+	method := wrapper.RequestWrapper.Method()
+	switch method {
+	case http.MethodGet:
+		id, exists := wrapper.RequestWrapper.GetPathParam("id")
+		if exists && id != nil && *id != "" {
+			h.GetByID(wrapper, pathParams)
+		} else {
+			h.List(wrapper, pathParams)
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Internal server error",
-			"details": err.Error(),
-		})
-		return
+	default:
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusMethodNotAllowed, "method not allowed")
 	}
-
-	c.JSON(http.StatusOK, schema)
 }
 
-// List retorna todos os schemas disponíveis
-func (h *Handler) List(c *gin.Context) {
-	schemas, err := h.svc.List(c.Request.Context())
+func (h *Handler) GetByID(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
+
+	schema, err := h.svc.GetByID(ctx, pathParams.BenchmarkID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Internal server error",
-			"details": err.Error(),
-		})
+		if err.Error() == "schema not found" {
+			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusNotFound, "Schema not found")
+			return
+		}
+		wrapper.ResponseWrapper.WriteServerErrorResponse()
+		return
+	}
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, schema)
+}
+
+func (h *Handler) List(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+	ctx := context.Background()
+
+	schemas, err := h.svc.List(ctx)
+	if err != nil {
+		wrapper.ResponseWrapper.WriteServerErrorResponse()
 		return
 	}
 
-	c.JSON(http.StatusOK, schemas)
+	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, schemas)
 }

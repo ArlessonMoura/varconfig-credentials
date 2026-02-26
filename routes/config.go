@@ -1,34 +1,32 @@
 package routes
 
 import (
-	"projeto-crud-credentials/pkg/handler/domain/core/config"
-
+	"github.com/Wizzi-Cloud/restwrapper/handler"
 	"github.com/gin-gonic/gin"
 )
 
-// SetupVarConfigRoutes registra as rotas de VarConfig seguindo a especificação do projeto
-func SetupVarConfigRoutes(router *gin.Engine, h *config.Handler) {
+func SetupVarConfigRoutes(router *gin.Engine, h *handler.Handler) {
 
 	// Agrupamento base para evitar repetição de prefixos
 	group := router.Group("/org/:orgId/compliance/variables/:benchmark_id")
 	{
 		// GET – Listar todos os varConfigs do benchmark
-		group.GET("", h.List)
+		group.GET("", h.HandleGin)
 
 		// POST – Criar um novo varConfig
-		group.POST("", h.Create)
+		group.POST("", h.HandleGin)
 
 		// Rotas que exigem um ID específico
 		specific := group.Group("/:id")
 		{
 			// GET – Obter um varConfig específico
-			specific.GET("", h.GetByID)
+			specific.GET("", h.HandleGin)
 
 			// PUT ou PATCH – Atualizar um varConfig
-			specific.PUT("", h.Update)
+			specific.PUT("", h.HandleGin)
 
 			// DELETE – Remover um varConfig
-			specific.DELETE("", h.Delete)
+			specific.DELETE("", h.HandleGin)
 		}
 	}
 }
