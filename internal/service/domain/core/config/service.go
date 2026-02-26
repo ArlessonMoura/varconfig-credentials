@@ -188,6 +188,30 @@ func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.Confi
 	}
 }
 
+// payloadValidator encapsula os dados que precisam ser validados
+// contra um esquema dinâmico. Implementa restwrapper.Validatable.
+type payloadValidator struct {
+	payload   map[string]any
+	schemaDef map[string]dtoBench.SchemaFieldDefinition
+}
+
+func (v *payloadValidator) Validate() error {
+	// Validar cada campo requerido e segundo sua definição
+	for fieldName, def := range v.schemaDef {
+		val, exists := v.payload[fieldName]
+		if def.Required && !exists {
+			return fmt.Errorf("field '%s' is required: %w", fieldName, ErrPayloadValidation)
+		}
+		if exists {
+			// Usar o método Validate() da definição de campo
+			if err := def.Validate(fieldName, val); err != nil {
+				return fmt.Errorf("%w", err)
+			}
+		}
+	}
+	return nil
+}
+
 // validatePayloadAgainstBenchmark faz uma checagem mínima de tipos do payload
 func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmarkID string, payload map[string]any) error {
 	// converter benchmarkID para int64 (o repositório trabalha com int64)
@@ -210,57 +234,13 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 		return fmt.Errorf("failed to unmarshal benchmark schema: %w", err)
 	}
 
-	// Validar cada campo requerido e tipo básico
-	for fieldName, def := range schemaDef {
-		val, exists := payload[fieldName]
-		if def.Required && !exists {
-			return fmt.Errorf("field '%s' is required: %w", fieldName, ErrPayloadValidation)
-		}
-		if exists {
-			switch def.Type {
-			case dtoBench.FieldTypeString:
-				if _, ok := val.(string); !ok {
-					return fmt.Errorf("field '%s' must be string: %w", fieldName, ErrPayloadValidation)
-				}
-			case dtoBench.FieldTypeNumber:
-				switch val.(type) {
-				case float64, float32, int, int64, int32:
-					// ok
-				default:
-					return fmt.Errorf("field '%s' must be number: %w", fieldName, ErrPayloadValidation)
-				}
-			case dtoBench.FieldTypeBoolean:
-				if _, ok := val.(bool); !ok {
-					return fmt.Errorf("field '%s' must be boolean: %w", fieldName, ErrPayloadValidation)
-				}
-			case dtoBench.FieldTypeArray:
-				// ensure slice
-				arr, ok := val.([]any)
-				if !ok {
-					return fmt.Errorf("field '%s' must be array: %w", fieldName, ErrPayloadValidation)
-				}
-				if def.Items != nil {
-					for _, elem := range arr {
-						switch def.Items.Type {
-						case dtoBench.FieldTypeString:
-							if _, ok := elem.(string); !ok {
-								return fmt.Errorf("array field '%s' elements must be string: %w", fieldName, ErrPayloadValidation)
-							}
-						case dtoBench.FieldTypeNumber:
-							switch elem.(type) {
-							case float64, float32, int, int64, int32:
-							default:
-								return fmt.Errorf("array field '%s' elements must be number: %w", fieldName, ErrPayloadValidation)
-							}
-						case dtoBench.FieldTypeBoolean:
-							if _, ok := elem.(bool); !ok {
-								return fmt.Errorf("array field '%s' elements must be boolean: %w", fieldName, ErrPayloadValidation)
-							}
-						}
-					}
-				}
-			}
-		}
+	validator := &payloadValidator{
+		payload:   payload,
+		schemaDef: schemaDef,
+	}
+	
+	if err := validator.Validate(); err != nil {
+		return err
 	}
 
 	return nil
