@@ -1,13 +1,11 @@
 package routes
 
 import (
-	"projeto-crud-credentials/pkg/handler/domain/compliance/benchmark"
-	"projeto-crud-credentials/pkg/handler/domain/core/config"
-
+	"github.com/Wizzi-Cloud/restwrapper/handler"
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(hConfig *config.Handler, hBench *benchmark.Handler) *gin.Engine {
+func SetupRouter(hConfig *handler.Handler, hBench *handler.Handler) *gin.Engine {
 	router := gin.Default()
 	SetupVarConfigRoutes(router, hConfig)
 	SetupBenchmarkSchemaRoutes(router, hBench)

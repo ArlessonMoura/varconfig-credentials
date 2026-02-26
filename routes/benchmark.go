@@ -1,17 +1,15 @@
 package routes
 
 import (
-	"projeto-crud-credentials/pkg/handler/domain/compliance/benchmark"
-
+	"github.com/Wizzi-Cloud/restwrapper/handler"
 	"github.com/gin-gonic/gin"
 )
 
-// SetupBenchmarkSchemaRoutes registra as rotas de consulta de schemas de benchmark
-func SetupBenchmarkSchemaRoutes(router *gin.Engine, h *benchmark.Handler) {
+func SetupBenchmarkSchemaRoutes(router *gin.Engine, h *handler.Handler) {
 	schemaGroup := router.Group("/compliance/benchmark/schema")
 	{
-		schemaGroup.GET("", h.List)
+		schemaGroup.GET("", h.HandleGin)
 
-		schemaGroup.GET("/:benchmarkId", h.GetByID)
+		schemaGroup.GET("/:benchmarkId", h.HandleGin)
 	}
 }

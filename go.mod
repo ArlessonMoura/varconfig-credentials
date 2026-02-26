@@ -3,6 +3,7 @@ module projeto-crud-credentials
 go 1.23.7
 
 require (
+	github.com/Wizzi-Cloud/restwrapper v0.0.0-20251020221013-841b2ba108dc
 	github.com/gin-gonic/gin v1.11.0
 	github.com/lib/pq v1.11.1
 	gorm.io/driver/postgres v1.6.0
@@ -11,7 +12,8 @@ require (
 
 require (
 	github.com/Wizzi-Cloud/apperror v0.0.0-20250403183749-2c2523e95aaf // indirect
-	github.com/Wizzi-Cloud/restwrapper v0.0.0-20251020221013-841b2ba108dc // indirect
+	github.com/Wizzi-Cloud/core_interfaces v0.0.0-20250130182336-a653f9cf22b6 // indirect
+	github.com/aws/aws-lambda-go v1.47.0 // indirect
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
