@@ -26,20 +26,19 @@ func NewService(relationalRepo ports.IBenchmarkRepository) *Service {
 	return &Service{relationalRepo: relationalRepo}
 }
 
-func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (dto.BenchmarkCreateResponseDTO, error) {
+func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (*models.BenchmarkSchemaPostgreSQL, error) {
 	// Validações
 	if name == "" {
-		return dto.BenchmarkCreateResponseDTO{}, ErrInvalidInput
+		return nil, ErrInvalidInput
 	}
 
 	if len(schemaRequest.Schema) == 0 {
-		return dto.BenchmarkCreateResponseDTO{}, ErrEmptySchema
+		return nil, ErrEmptySchema
 	}
 
-	// Marshal full schema definition into JSON and store in jsonb column
 	schemaJSON, err := json.Marshal(schemaRequest.Schema)
 	if err != nil {
-		return dto.BenchmarkCreateResponseDTO{}, fmt.Errorf("failed to marshal schema: %w", err)
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
 	postgresSchema := &models.BenchmarkSchemaPostgreSQL{
@@ -48,14 +47,10 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Be
 	}
 
 	if err := s.relationalRepo.Create(ctx, postgresSchema); err != nil {
-		return dto.BenchmarkCreateResponseDTO{}, fmt.Errorf("failed to create schema in relational db: %w", err)
+		return nil, fmt.Errorf("failed to create schema in relational db: %w", err)
 	}
 
-	return dto.BenchmarkCreateResponseDTO{
-		ID:        fmt.Sprintf("%d", postgresSchema.ID),
-		Name:      name,
-		CreatedAt: postgresSchema.CreatedAt.Format(time.RFC3339),
-	}, nil
+	return postgresSchema, nil
 }
 
 // List recupera todos os schemas disponíveis (versão enxuta sem SchemaBody)

@@ -4,6 +4,7 @@ import (
 	"context"
 	dtoBenchmark "projeto-crud-credentials/dto/benchmark"
 	dtoConfig "projeto-crud-credentials/dto/config"
+	"projeto-crud-credentials/pkg/models"
 )
 
 type IVarConfigService interface {
@@ -23,7 +24,7 @@ type IVarConfigService interface {
 
 type IBenchmarkSchemaService interface {
 	//CREATE
-	Create(ctx context.Context, name string, schemaRequest *dtoBenchmark.BenchmarkCreateRequestDTO) (dtoBenchmark.BenchmarkCreateResponseDTO, error)
+	Create(ctx context.Context, name string, schemaRequest *dtoBenchmark.BenchmarkCreateRequestDTO) (*models.BenchmarkSchemaPostgreSQL, error)
 
 	//READ
 	List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponseDTO, error)
