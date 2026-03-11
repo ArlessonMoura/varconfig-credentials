@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	models "projeto-crud-credentials/pkg/models/benchmark"
+	"projeto-crud-credentials/pkg/models"
 )
 
 type Repository struct {

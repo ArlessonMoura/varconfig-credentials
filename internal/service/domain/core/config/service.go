@@ -10,7 +10,7 @@ import (
 	dtoBench "projeto-crud-credentials/dto/benchmark"
 	dto "projeto-crud-credentials/dto/config"
 	ports "projeto-crud-credentials/internal/service"
-	models "projeto-crud-credentials/pkg/models/config"
+	"projeto-crud-credentials/pkg/models"
 )
 
 // Erros de domínio básicos

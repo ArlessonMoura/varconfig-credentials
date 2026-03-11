@@ -7,7 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
-	models "projeto-crud-credentials/pkg/models/config"
+	"projeto-crud-credentials/pkg/models"
 )
 
 // Repository implementa IVarConfigRepository usando PostgreSQL + GORM

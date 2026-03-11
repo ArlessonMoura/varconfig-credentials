@@ -9,7 +9,7 @@ import (
 
 	dto "projeto-crud-credentials/dto/benchmark"
 	ports "projeto-crud-credentials/internal/service"
-	models "projeto-crud-credentials/pkg/models/benchmark"
+	"projeto-crud-credentials/pkg/models"
 )
 
 var (
