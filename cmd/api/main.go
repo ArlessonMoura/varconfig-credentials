@@ -48,7 +48,7 @@ func Bootstrap() {
 	}
 
 	// AutoMigrate das tabelas essenciais (benchmark schemas e var_configs)
-	if err := gormDB.AutoMigrate(&models.BenchmarkSchemaPostgreSQL{}, &models.VarConfigPostgreSQL{}); err != nil {
+	if err := gormDB.AutoMigrate(&models.BenchmarkSchema{}, &models.VarConfig{}); err != nil {
 		log.Fatalf("Erro ao executar AutoMigrate: %v", err)
 	}
 

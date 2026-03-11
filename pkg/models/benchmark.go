@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// BenchmarkSchemaPostgreSQL representa o schema no banco relacional PostgreSQL
-type BenchmarkSchemaPostgreSQL struct {
+// BenchmarkSchema representa o schema no banco relacional PostgreSQL
+type BenchmarkSchema struct {
 	ID        int64           `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name      string          `gorm:"not null" json:"name"`
 	Schema    json.RawMessage `gorm:"type:jsonb;column:schema_body" json:"schema_body"`
@@ -14,7 +14,7 @@ type BenchmarkSchemaPostgreSQL struct {
 	UpdatedAt time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
-func (BenchmarkSchemaPostgreSQL) TableName() string {
+func (BenchmarkSchema) TableName() string {
 	return "benchmark_schemas"
 }
 
@@ -31,4 +31,3 @@ type BenchmarkSchemaCreateRequest struct {
 // 	SchemaBody map[string]string `json:"schema_body"`
 // }
 
-// DynamoDB artifacts removed — benchmark schemas are stored in Postgres (jsonb).

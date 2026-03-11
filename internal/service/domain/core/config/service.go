@@ -169,8 +169,8 @@ func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) err
 	return s.repository.Delete(ctx, intID)
 }
 
-// mapItemToResponse converte VarConfigPostgreSQL para VarConfigResponse
-func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.ConfigResponseDTO {
+// mapItemToResponse converte VarConfig para VarConfigResponse
+func (s *Service) mapItemToResponse(item *models.VarConfig) *dto.ConfigResponseDTO {
 	var payload map[string]any
 	if item.Payload != nil {
 		if err := json.Unmarshal(item.Payload, &payload); err != nil {

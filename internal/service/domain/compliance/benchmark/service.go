@@ -26,7 +26,7 @@ func NewService(relationalRepo ports.IBenchmarkRepository) *Service {
 	return &Service{relationalRepo: relationalRepo}
 }
 
-func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (*models.BenchmarkSchemaPostgreSQL, error) {
+func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (*models.BenchmarkSchema, error) {
 	// Validações
 	if name == "" {
 		return nil, ErrInvalidInput
@@ -41,7 +41,7 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Be
 		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
-	postgresSchema := &models.BenchmarkSchemaPostgreSQL{
+	postgresSchema := &models.BenchmarkSchema{
 		Name:   name,
 		Schema: schemaJSON,
 	}

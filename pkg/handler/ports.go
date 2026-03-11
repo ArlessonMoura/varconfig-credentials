@@ -24,7 +24,7 @@ type IVarConfigService interface {
 
 type IBenchmarkSchemaService interface {
 	//CREATE
-	Create(ctx context.Context, name string, schemaRequest *dtoBenchmark.BenchmarkCreateRequestDTO) (*models.BenchmarkSchemaPostgreSQL, error)
+	Create(ctx context.Context, name string, schemaRequest *dtoBenchmark.BenchmarkCreateRequestDTO) (*models.BenchmarkSchema, error)
 
 	//READ
 	List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponseDTO, error)
