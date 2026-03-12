@@ -6,7 +6,7 @@ import (
 )
 
 type IVarConfigRepository interface {
-	Create(ctx context.Context, orgID string, benchmarkID string, payload map[string]any) (*models.VarConfig, error)
+	Create(ctx context.Context, orgID string, benchmarkID string, name string, payload map[string]any) (*models.VarConfig, error)
 
 	List(ctx context.Context, orgID string, benchmarkID string) ([]*models.VarConfig, error)
 

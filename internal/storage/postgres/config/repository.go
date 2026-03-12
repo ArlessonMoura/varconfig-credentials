@@ -19,13 +19,14 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Create(ctx context.Context, orgID, benchmarkID string, payload map[string]any) (*models.VarConfig, error) {
+func (r *Repository) Create(ctx context.Context, orgID, benchmarkID, name string, payload map[string]any) (*models.VarConfig, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
 	item := &models.VarConfig{
+		Name:        name,
 		OrgID:       orgID,
 		BenchmarkID: benchmarkID,
 		Payload:     payloadJSON,
@@ -43,7 +44,7 @@ func (r *Repository) List(ctx context.Context, orgID, benchmarkID string) ([]*mo
 
 	// Selecionar apenas os campos necessários (sem payload) para reduzir transferência de dados
 	if err := r.db.WithContext(ctx).
-		Select("id", "org_id", "benchmark_id", "created_at", "updated_at").
+		Select("id", "name", "org_id", "benchmark_id", "created_at", "updated_at").
 		Where("org_id = ? AND benchmark_id = ?", orgID, benchmarkID).
 		Order("created_at DESC").
 		Find(&items).Error; err != nil {

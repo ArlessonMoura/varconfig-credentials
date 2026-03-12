@@ -30,9 +30,9 @@ func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchema)
 func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchema, error) {
 	var items []*models.BenchmarkSchema
 
-	// Selecionar apenas os campos de metadados para evitar transferência do JSONB (schema_body)
+	// Selecionar apenas os campos de metadados para evitar transferência do JSONB (schema_definition)
 	if err := r.db.WithContext(ctx).
-		Select("id", "name", "created_at", "updated_at").
+		Select("id", "name", "version", "created_at", "updated_at").
 		Order("created_at desc").
 		Find(&items).Error; err != nil {
 		return nil, fmt.Errorf("failed to list benchmark schemas: %w", err)

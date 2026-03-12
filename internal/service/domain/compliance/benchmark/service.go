@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	ErrInvalidInput   = errors.New("invalid input: name is required")
-	ErrEmptySchema    = errors.New("schema cannot be empty")
-	ErrSchemaNotFound = errors.New("schema not found")
+	ErrInvalidInput     = errors.New("invalid input: name is required")
+	ErrEmptySchema      = errors.New("schema cannot be empty")
+	ErrSchemaNotFound   = errors.New("schema not found")
+	ErrDuplicateName    = errors.New("schema with this name already exists")
 )
 
 type Service struct {
@@ -26,10 +27,10 @@ func NewService(relationalRepo ports.IBenchmarkRepository) *Service {
 	return &Service{relationalRepo: relationalRepo}
 }
 
-func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (*models.BenchmarkSchema, error) {
-	// Validações
-	if name == "" {
-		return nil, ErrInvalidInput
+func (s *Service) Create(ctx context.Context, schemaRequest *dto.BenchmarkCreateRequestDTO) (*models.BenchmarkSchema, error) {
+	
+	if err := schemaRequest.Validate(); err != nil {
+		return nil, err
 	}
 
 	if len(schemaRequest.Schema) == 0 {
@@ -41,16 +42,21 @@ func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.Be
 		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
-	postgresSchema := &models.BenchmarkSchema{
-		Name:   name,
-		Schema: schemaJSON,
+	schema := &models.BenchmarkSchema{
+		Name:    schemaRequest.Name,
+		Version: schemaRequest.Version,
+		Schema:  schemaJSON,
 	}
 
-	if err := s.relationalRepo.Create(ctx, postgresSchema); err != nil {
+	if err := s.relationalRepo.Create(ctx, schema); err != nil {
+		// Tratamento específico para violação de unique constraint
+		if isUniqueViolationError(err) {
+			return nil, ErrDuplicateName
+		}
 		return nil, fmt.Errorf("failed to create schema in relational db: %w", err)
 	}
 
-	return postgresSchema, nil
+	return schema, nil
 }
 
 // List recupera todos os schemas disponíveis (versão enxuta sem SchemaBody)
@@ -69,8 +75,10 @@ func (s *Service) List(ctx context.Context) (*dto.BenchmarkListResponseDTO, erro
 		data = append(data, dto.BenchmarkResponseDTO{
 			ID:         fmt.Sprintf("%d", item.ID),
 			Name:       item.Name,
+			Version:    item.Version,
 			SchemaBody: nil,
 			CreatedAt:  item.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:  item.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 
@@ -107,8 +115,10 @@ func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkRespons
 	return &dto.BenchmarkResponseDTO{
 		ID:         fmt.Sprintf("%d", item.ID),
 		Name:       item.Name,
+		Version:    item.Version,
 		SchemaBody: schemaBody,
 		CreatedAt:  item.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  item.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -124,4 +134,32 @@ func convertSchemaBodyToStringMap(schema map[string]dto.SchemaFieldDefinition) m
 		result[k] = string(jsonData)
 	}
 	return result
+}
+
+// isUniqueViolationError verifica se o erro é uma violação de constraint unique
+func isUniqueViolationError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return contains(errStr, "unique constraint") || contains(errStr, "duplicate key") || contains(errStr, "UNIQUE violation")
+}
+
+// contains verifica se uma substring existe em uma string (case-insensitive)
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || 
+		(len(s) > len(substr) && 
+			(s[:len(substr)] == substr || 
+				s[len(s)-len(substr):] == substr || 
+				indexOf(s, substr) >= 0)))
+}
+
+// indexOf retorna o índice da primeira ocorrência de substr em s
+func indexOf(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }

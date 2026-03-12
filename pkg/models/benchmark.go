@@ -7,11 +7,12 @@ import (
 
 // BenchmarkSchema representa o schema no banco relacional PostgreSQL
 type BenchmarkSchema struct {
-	ID        int64           `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name      string          `gorm:"not null" json:"name"`
-	Schema    json.RawMessage `gorm:"type:jsonb;column:schema_body" json:"schema_body"`
-	CreatedAt time.Time       `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
+  ID               int64            `gorm:"primaryKey;autoIncrement" json:"id"`
+  Name             string           `gorm:"type:varchar(255);not null;unique" json:"name"`
+  Version          string           `gorm:"type:varchar(50);not null" json:"version"`
+  Schema json.RawMessage						`gorm:"type:jsonb;column:schema_definition" json:"schema_definition"`
+  CreatedAt        time.Time        `gorm:"autoCreateTime" json:"created_at"`
+  UpdatedAt        time.Time        `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (BenchmarkSchema) TableName() string {

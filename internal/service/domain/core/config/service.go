@@ -18,6 +18,7 @@ var (
 	ErrNotFound          = errors.New("varconfig not found")
 	ErrInvalidInput      = errors.New("invalid input: orgID and benchmarkID are required")
 	ErrPayloadValidation = errors.New("payload validation failed")
+	ErrDuplicateName     = errors.New("configuration with this name already exists for this organization and benchmark")
 )
 
 type Service struct {
@@ -38,13 +39,21 @@ func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, 
 		return nil, ErrInvalidInput
 	}
 
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
 	// Validar payload contra o schema do benchmark (checagem mínima de tipos)
 	if err := s.validatePayloadAgainstBenchmark(ctx, benchmarkID, input.Payload); err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
-	item, err := s.repository.Create(ctx, orgID, benchmarkID, input.Payload)
+	item, err := s.repository.Create(ctx, orgID, benchmarkID, input.Name, input.Payload)
 	if err != nil {
+		// Tratamento específico para violação de unique constraint
+		if isUniqueViolationError(err) {
+			return nil, ErrDuplicateName
+		}
 		return nil, fmt.Errorf("storage error: %w", err)
 	}
 
@@ -66,6 +75,7 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Con
 	for _, item := range items {
 		data = append(data, dto.ConfigListResponseDTO{
 			ID:          fmt.Sprintf("%d", item.ID),
+			Name:        item.Name,
 			OrgID:       item.OrgID,
 			BenchmarkID: item.BenchmarkID,
 			CreatedAt:   item.CreatedAt.Format(time.RFC3339),
@@ -180,6 +190,7 @@ func (s *Service) mapItemToResponse(item *models.VarConfig) *dto.ConfigResponseD
 
 	return &dto.ConfigResponseDTO{
 		ID:          fmt.Sprintf("%d", item.ID),
+		Name:        item.Name,
 		OrgID:       item.OrgID,
 		BenchmarkID: item.BenchmarkID,
 		Payload:     payload,
@@ -244,4 +255,32 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 	}
 
 	return nil
+}
+
+// isUniqueViolationError verifica se o erro é uma violação de constraint unique
+func isUniqueViolationError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return contains(errStr, "unique constraint") || contains(errStr, "duplicate key") || contains(errStr, "UNIQUE violation")
+}
+
+// contains verifica se uma substring existe em uma string (case-insensitive)
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || 
+		(len(s) > len(substr) && 
+			(s[:len(substr)] == substr || 
+				s[len(s)-len(substr):] == substr || 
+				indexOf(s, substr) >= 0)))
+}
+
+// indexOf retorna o índice da primeira ocorrência de substr em s
+func indexOf(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
