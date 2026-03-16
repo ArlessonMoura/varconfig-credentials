@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	dtoBench "projeto-crud-credentials/dto/benchmark"
-	dto "projeto-crud-credentials/dto/config"
+	"projeto-crud-credentials/dto/benchmark"
+	"projeto-crud-credentials/dto/config"
+	"projeto-crud-credentials/internal/common/helpers"
 	ports "projeto-crud-credentials/internal/service"
 	"projeto-crud-credentials/pkg/models"
 )
@@ -34,7 +35,7 @@ func NewService(repository ports.IVarConfigRepository, benchmarkRepo ports.IBenc
 }
 
 // Create cria um novo VarConfig com ID gerado automaticamente pelo PostgreSQL
-func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *dto.ConfigCreateRequestDTO) (*dto.ConfigResponseDTO, error) {
+func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *config.ConfigCreateRequestDTO) (*config.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
 	}
@@ -50,18 +51,14 @@ func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, 
 
 	item, err := s.repository.Create(ctx, orgID, benchmarkID, input.Name, input.Payload)
 	if err != nil {
-		// Tratamento específico para violação de unique constraint
-		if isUniqueViolationError(err) {
-			return nil, ErrDuplicateName
-		}
-		return nil, fmt.Errorf("storage error: %w", err)
+		return nil, helpers.ValidateUniqueViolationError(err, ErrDuplicateName)
 	}
 
-	return s.mapItemToResponse(item), nil
+	return helpers.MapVarConfigToResponse(item), nil
 }
 
 // List retorna todas as configurações de benchmark (versão leve sem payload)
-func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.ConfigListAllResponseDTO, error) {
+func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*config.ConfigListAllResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" {
 		return nil, ErrInvalidInput
 	}
@@ -71,9 +68,9 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Con
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
-	var data []dto.ConfigListResponseDTO
+	var data []config.ConfigListResponseDTO
 	for _, item := range items {
-		data = append(data, dto.ConfigListResponseDTO{
+		data = append(data, config.ConfigListResponseDTO{
 			ID:          fmt.Sprintf("%d", item.ID),
 			Name:        item.Name,
 			OrgID:       item.OrgID,
@@ -83,11 +80,11 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Con
 		})
 	}
 
-	return &dto.ConfigListAllResponseDTO{Data: data}, nil
+	return &config.ConfigListAllResponseDTO{Data: data}, nil
 }
 
 // GetByID retorna todas as configurações de um benchmark específico
-func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*dto.ConfigResponseDTO, error) {
+func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*config.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
 		return nil, ErrInvalidInput
 	}
@@ -111,10 +108,10 @@ func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*
 		return nil, ErrNotFound
 	}
 
-	return s.mapItemToResponse(item), nil
+	return helpers.MapVarConfigToResponse(item), nil
 }
 
-func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *dto.ConfigUpdateRequestDTO) (*dto.ConfigResponseDTO, error) {
+func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *config.ConfigUpdateRequestDTO) (*config.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
 		return nil, ErrInvalidInput
 	}
@@ -149,13 +146,10 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 	// Atualizar payload e name
 	item, err := s.repository.Update(ctx, intID, input.Name, input.Payload)
 	if err != nil {
-		if isUniqueViolationError(err) {
-			return nil, ErrDuplicateName
-		}
-		return nil, fmt.Errorf("update error: %w", err)
+		return nil, helpers.ValidateUniqueViolationError(err, ErrDuplicateName)
 	}
 
-	return s.mapItemToResponse(item), nil
+	return helpers.MapVarConfigToResponse(item), nil
 }
 
 func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) error {
@@ -185,7 +179,7 @@ func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) err
 }
 
 // mapItemToResponse converte VarConfig para VarConfigResponse
-func (s *Service) mapItemToResponse(item *models.VarConfig) *dto.ConfigResponseDTO {
+func (s *Service) mapItemToResponse(item *models.VarConfig) *config.ConfigResponseDTO {
 	var payload map[string]any
 	if item.Payload != nil {
 		if err := json.Unmarshal(item.Payload, &payload); err != nil {
@@ -193,7 +187,7 @@ func (s *Service) mapItemToResponse(item *models.VarConfig) *dto.ConfigResponseD
 		}
 	}
 
-	return &dto.ConfigResponseDTO{
+	return &config.ConfigResponseDTO{
 		ID:          fmt.Sprintf("%d", item.ID),
 		Name:        item.Name,
 		OrgID:       item.OrgID,
@@ -208,7 +202,7 @@ func (s *Service) mapItemToResponse(item *models.VarConfig) *dto.ConfigResponseD
 // contra um esquema dinâmico. Implementa restwrapper.Validatable.
 type payloadValidator struct {
 	payload   map[string]any
-	schemaDef map[string]dtoBench.SchemaFieldDefinition
+	schemaDef map[string]benchmark.SchemaFieldDefinition
 }
 
 func (v *payloadValidator) Validate() error {
@@ -239,13 +233,13 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 	// Buscar schema
 	bench, err := s.benchmarkRepo.GetByID(ctx, intID)
 	if err != nil {
-		return fmt.Errorf("failed to fetch benchmark schema: %w", err)
+		return s.repository.Delete(ctx, intID)
 	}
 	if bench == nil {
 		return fmt.Errorf("benchmark schema not found")
 	}
 
-	var schemaDef map[string]dtoBench.SchemaFieldDefinition
+	var schemaDef map[string]benchmark.SchemaFieldDefinition
 	if err := json.Unmarshal(bench.Schema, &schemaDef); err != nil {
 		return fmt.Errorf("failed to unmarshal benchmark schema: %w", err)
 	}
@@ -260,32 +254,4 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 	}
 
 	return nil
-}
-
-// isUniqueViolationError verifica se o erro é uma violação de constraint unique
-func isUniqueViolationError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errStr := err.Error()
-	return contains(errStr, "unique constraint") || contains(errStr, "duplicate key") || contains(errStr, "UNIQUE violation")
-}
-
-// contains verifica se uma substring existe em uma string (case-insensitive)
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && 
-			(s[:len(substr)] == substr || 
-				s[len(s)-len(substr):] == substr || 
-				indexOf(s, substr) >= 0)))
-}
-
-// indexOf retorna o índice da primeira ocorrência de substr em s
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }
