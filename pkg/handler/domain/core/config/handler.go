@@ -152,6 +152,14 @@ func (h *Handler) Update(wrapper *restwrapper.Wrapper) {
 			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
 			return
 		}
+		if errMsg == "name is required" {
+			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
+			return
+		}
+		if errMsg == "configuration with this name already exists for this organization and benchmark" {
+			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusConflict, errMsg)
+			return
+		}
 		wrapper.ResponseWrapper.WriteServerErrorResponse()
 		return
 	}

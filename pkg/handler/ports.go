@@ -29,4 +29,7 @@ type IBenchmarkSchemaService interface {
 	//READ
 	List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponseDTO, error)
 	GetByID(ctx context.Context, id string) (*dtoBenchmark.BenchmarkResponseDTO, error)
+
+	//DELETE
+	Delete(ctx context.Context, id string) error
 }

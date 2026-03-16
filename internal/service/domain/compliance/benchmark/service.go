@@ -163,3 +163,25 @@ func indexOf(s, substr string) int {
 	}
 	return -1
 }
+
+// Delete remove um benchmark schema e automaticamente todas as configurações associadas (CASCADE)
+func (s *Service) Delete(ctx context.Context, id string) error {
+	// Converter ID string para int64
+	var intID int64
+	if _, err := fmt.Sscan(id, &intID); err != nil {
+		return fmt.Errorf("invalid id format: %w", err)
+	}
+
+	// Verificar se o schema existe antes de deletar
+	_, err := s.relationalRepo.GetByID(ctx, intID)
+	if err != nil {
+		return fmt.Errorf("failed to get benchmark schema: %w", err)
+	}
+
+	// Deletar o schema (cascade deletará automaticamente os VarConfigs associados)
+	if err := s.relationalRepo.Delete(ctx, &intID); err != nil {
+		return fmt.Errorf("failed to delete benchmark schema: %w", err)
+	}
+
+	return nil
+}

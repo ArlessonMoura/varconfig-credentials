@@ -10,7 +10,8 @@ type VarConfig struct {
   ID          int64           `gorm:"primaryKey;autoIncrement" json:"id"`
   Name        string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_varcfg_org_bench_name" json:"name"` 
   OrgID       string          `gorm:"not null;uniqueIndex:idx_varcfg_org_bench_name" json:"org_id"`
-  BenchmarkID string          `gorm:"not null;uniqueIndex:idx_varcfg_org_bench_name" json:"benchmark_id"`
+  BenchmarkID string          `gorm:"not null;uniqueIndex:idx_varcfg_org_bench_name;constraint:OnDelete:CASCADE" json:"benchmark_id"`
+  Benchmark   *BenchmarkSchema `gorm:"foreignKey:BenchmarkID;constraint:OnDelete:CASCADE" json:"benchmark,omitempty"`
   Payload     json.RawMessage `gorm:"type:jsonb;column:payload" json:"payload"`
   CreatedAt   time.Time       `gorm:"autoCreateTime" json:"created_at"`
   UpdatedAt   time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
