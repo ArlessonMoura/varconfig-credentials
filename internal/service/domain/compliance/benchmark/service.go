@@ -9,6 +9,7 @@ import (
 	dtoBenchmark "projeto-crud-credentials/dto/benchmark"
 	"projeto-crud-credentials/internal/common/helpers"
 	ports "projeto-crud-credentials/internal/service"
+	svcbenchmark "projeto-crud-credentials/pkg/handler"
 	"projeto-crud-credentials/pkg/models"
 )
 
@@ -117,3 +118,5 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 
 	return nil
 }
+
+var _ svcbenchmark.IBenchmarkSchemaService = (*Service)(nil)

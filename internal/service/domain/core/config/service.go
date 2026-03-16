@@ -11,6 +11,7 @@ import (
 	"projeto-crud-credentials/dto/config"
 	"projeto-crud-credentials/internal/common/helpers"
 	ports "projeto-crud-credentials/internal/service"
+	svcvarconfig "projeto-crud-credentials/pkg/handler"
 	"projeto-crud-credentials/pkg/models"
 )
 
@@ -255,3 +256,5 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 
 	return nil
 }
+
+var _ svcvarconfig.IVarConfigService = (*Service)(nil)
