@@ -119,7 +119,10 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 		return nil, ErrInvalidInput
 	}
 
-	// Converter ID string para int64
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
 	var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return nil, fmt.Errorf("invalid id format: %w", err)
@@ -143,9 +146,12 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
-	// Atualizar payload
-	item, err := s.repository.Update(ctx, intID, input.Payload)
+	// Atualizar payload e name
+	item, err := s.repository.Update(ctx, intID, input.Name, input.Payload)
 	if err != nil {
+		if isUniqueViolationError(err) {
+			return nil, ErrDuplicateName
+		}
 		return nil, fmt.Errorf("update error: %w", err)
 	}
 
@@ -157,7 +163,6 @@ func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) err
 		return ErrInvalidInput
 	}
 
-	// Converter ID string para int64
 	var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return fmt.Errorf("invalid id format: %w", err)

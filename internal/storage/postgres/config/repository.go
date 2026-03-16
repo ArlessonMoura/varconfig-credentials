@@ -67,17 +67,19 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*models.VarConfig, 
 	return &item, nil
 }
 
-func (r *Repository) Update(ctx context.Context, id int64, payload map[string]any) (*models.VarConfig, error) {
+func (r *Repository) Update(ctx context.Context, id int64, name string, payload map[string]any) (*models.VarConfig, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	item := &models.VarConfig{Payload: payloadJSON}
-
+	// Atualizar tanto name quanto payload
 	if err := r.db.WithContext(ctx).Model(&models.VarConfig{}).
 		Where("id = ?", id).
-		Update("payload", item.Payload).Error; err != nil {
+		Updates(map[string]interface{}{
+			"name":    name,
+			"payload": payloadJSON,
+		}).Error; err != nil {
 		return nil, fmt.Errorf("failed to update var_config: %w", err)
 	}
 

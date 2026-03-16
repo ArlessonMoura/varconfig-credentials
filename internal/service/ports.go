@@ -12,7 +12,7 @@ type IVarConfigRepository interface {
 
 	GetByID(ctx context.Context, id int64) (*models.VarConfig, error)
 
-	Update(ctx context.Context, id int64, payload map[string]any) (*models.VarConfig, error)
+	Update(ctx context.Context, id int64, name string, payload map[string]any) (*models.VarConfig, error)
 
 	Delete(ctx context.Context, id int64) error
 }
