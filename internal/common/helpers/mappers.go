@@ -42,7 +42,8 @@ func MapBenchmarkSchemaToResponse(item *models.BenchmarkSchema) *benchmark.Bench
 	}
 }
 
-// BenchmarkSchema para BenchmarkResponseDTO func MapBenchmarkSchemaToResponseWithSchema(item *models.BenchmarkSchema) *benchmark.BenchmarkResponseDTO {
+// BenchmarkSchema para BenchmarkResponseDTO com schema
+func MapBenchmarkSchemaToResponseWithSchema(item *models.BenchmarkSchema) *benchmark.BenchmarkResponseDTO {
 	schemaBody := ConvertSchemaBodyToStringMap(item.Schema)
 
 	return &benchmark.BenchmarkResponseDTO{
