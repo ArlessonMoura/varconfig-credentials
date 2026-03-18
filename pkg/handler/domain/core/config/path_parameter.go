@@ -31,7 +31,6 @@ func (p *PathParams) Validate() error {
 	return nil
 }
 
-
 func validateRequiredString(value, paramName string) error {
 	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("%s não pode estar vazio", paramName)
