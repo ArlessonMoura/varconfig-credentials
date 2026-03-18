@@ -3,19 +3,14 @@ package benchmark
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"time"
 
-	dto "projeto-crud-credentials/dto/benchmark"
+	dtoBenchmark "projeto-crud-credentials/dto/benchmark"
+	"projeto-crud-credentials/internal/common"
+	"projeto-crud-credentials/internal/common/helpers"
 	ports "projeto-crud-credentials/internal/service"
-	models "projeto-crud-credentials/pkg/models/benchmark"
-)
-
-var (
-	ErrInvalidInput   = errors.New("invalid input: name is required")
-	ErrEmptySchema    = errors.New("schema cannot be empty")
-	ErrSchemaNotFound = errors.New("schema not found")
+	svcbenchmark "projeto-crud-credentials/pkg/handler"
+	"projeto-crud-credentials/pkg/models"
 )
 
 type Service struct {
@@ -26,69 +21,59 @@ func NewService(relationalRepo ports.IBenchmarkRepository) *Service {
 	return &Service{relationalRepo: relationalRepo}
 }
 
-func (s *Service) Create(ctx context.Context, name string, schemaRequest *dto.BenchmarkCreateRequestDTO) (dto.BenchmarkCreateResponseDTO, error) {
-	// Validações
-	if name == "" {
-		return dto.BenchmarkCreateResponseDTO{}, ErrInvalidInput
+func (s *Service) Create(ctx context.Context, schemaRequest *dtoBenchmark.BenchmarkCreateRequestDTO) (*models.BenchmarkSchema, error) {
+	
+	if err := schemaRequest.Validate(); err != nil {
+		return nil, err
 	}
 
 	if len(schemaRequest.Schema) == 0 {
-		return dto.BenchmarkCreateResponseDTO{}, ErrEmptySchema
+		return nil, common.ErrBenchmarkEmptySchema
 	}
 
-	// Marshal full schema definition into JSON and store in jsonb column
 	schemaJSON, err := json.Marshal(schemaRequest.Schema)
 	if err != nil {
-		return dto.BenchmarkCreateResponseDTO{}, fmt.Errorf("failed to marshal schema: %w", err)
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
-	postgresSchema := &models.BenchmarkSchemaPostgreSQL{
-		Name:   name,
-		Schema: schemaJSON,
+	schema := &models.BenchmarkSchema{
+		Name:    schemaRequest.Name,
+		Version: schemaRequest.Version,
+		Schema:  schemaJSON,
 	}
 
-	if err := s.relationalRepo.Create(ctx, postgresSchema); err != nil {
-		return dto.BenchmarkCreateResponseDTO{}, fmt.Errorf("failed to create schema in relational db: %w", err)
+	if err := s.relationalRepo.Create(ctx, schema); err != nil {
+		return nil, helpers.ValidateUniqueViolationError(err, common.ErrBenchmarkDuplicateName)
 	}
 
-	return dto.BenchmarkCreateResponseDTO{
-		ID:        fmt.Sprintf("%d", postgresSchema.ID),
-		Name:      name,
-		CreatedAt: postgresSchema.CreatedAt.Format(time.RFC3339),
-	}, nil
+	return schema, nil
 }
 
-// List recupera todos os schemas disponíveis (versão enxuta sem SchemaBody)
-func (s *Service) List(ctx context.Context) (*dto.BenchmarkListResponseDTO, error) {
+// List recupera todos os schemas disponíveis 
+func (s *Service) List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponseDTO, error) {
 	items, err := s.relationalRepo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list schemas from repository: %w", err)
 	}
 
 	if items == nil {
-		return &dto.BenchmarkListResponseDTO{Data: []dto.BenchmarkResponseDTO{}, Count: 0}, nil
+		return &dtoBenchmark.BenchmarkListResponseDTO{Data: []dtoBenchmark.BenchmarkResponseDTO{}, Count: 0}, nil
 	}
 
-	var data []dto.BenchmarkResponseDTO
+	var data []dtoBenchmark.BenchmarkResponseDTO
 	for _, item := range items {
-		data = append(data, dto.BenchmarkResponseDTO{
-			ID:         fmt.Sprintf("%d", item.ID),
-			Name:       item.Name,
-			SchemaBody: nil,
-			CreatedAt:  item.CreatedAt.Format(time.RFC3339),
-		})
+		data = append(data, *helpers.MapBenchmarkSchemaToResponse(item))
 	}
 
-	return &dto.BenchmarkListResponseDTO{
+	return &dtoBenchmark.BenchmarkListResponseDTO{
 		Data:  data,
 		Count: len(data),
 	}, nil
 }
 
 // GetByID busca um schema pelo ID
-func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkResponseDTO, error) {
-	// id vem como string (do handler). Converter para int64
-	var intID int64
+func (s *Service) GetByID(ctx context.Context, id string) (*dtoBenchmark.BenchmarkResponseDTO, error) {
+		var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return nil, fmt.Errorf("invalid id format: %w", err)
 	}
@@ -98,35 +83,31 @@ func (s *Service) GetByID(ctx context.Context, id string) (*dto.BenchmarkRespons
 		return nil, fmt.Errorf("failed to get schema from repository: %w", err)
 	}
 	if item == nil {
-		return nil, ErrSchemaNotFound
+		return nil, common.ErrBenchmarkSchemaNotFound
 	}
 
-	// Unmarshal stored JSON into DTO structure and convert to string map for compatibility
-	var schemaDef map[string]dto.SchemaFieldDefinition
-	if err := json.Unmarshal(item.Schema, &schemaDef); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal stored schema: %w", err)
-	}
-
-	schemaBody := convertSchemaBodyToStringMap(schemaDef)
-
-	return &dto.BenchmarkResponseDTO{
-		ID:         fmt.Sprintf("%d", item.ID),
-		Name:       item.Name,
-		SchemaBody: schemaBody,
-		CreatedAt:  item.CreatedAt.Format(time.RFC3339),
-	}, nil
+	return helpers.MapBenchmarkSchemaToResponseWithSchema(item), nil
 }
 
-func convertSchemaBodyToStringMap(schema map[string]dto.SchemaFieldDefinition) map[string]string {
-	result := make(map[string]string)
-	for k, v := range schema {
-		// transforma a struct SchemaProperty em uma string JSON válida
-		jsonData, err := json.Marshal(v)
-		if err != nil {
-			result[k] = fmt.Sprintf(`{"type":"%s","error":"marshal_failed"}`, v.Type)
-			continue
-		}
-		result[k] = string(jsonData)
+// Delete remove um benchmark schema e todas as configurações associadas 
+func (s *Service) Delete(ctx context.Context, id string) error {
+	// Converter ID string para int64
+	var intID int64
+	if _, err := fmt.Sscan(id, &intID); err != nil {
+		return fmt.Errorf("invalid id format: %w", err)
 	}
-	return result
+
+	// Verificar se o schema existe antes de deletar
+	_, err := s.relationalRepo.GetByID(ctx, intID)
+	if err != nil {
+		return fmt.Errorf("failed to get benchmark schema: %w", err)
+	}
+
+		if err := s.relationalRepo.Delete(ctx, &intID); err != nil {
+		return fmt.Errorf("failed to delete benchmark schema: %w", err)
+	}
+
+	return nil
 }
+
+var _ svcbenchmark.IBenchmarkSchemaService = (*Service)(nil)

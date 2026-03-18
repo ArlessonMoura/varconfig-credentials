@@ -1,7 +1,15 @@
-// Package config contains DTOs (Data Transfer Objects) for variable configuration operations
 package config
+
+import (
+	"projeto-crud-credentials/internal/common/validation"
+)
 
 // ConfigCreateRequestDTO represents the data required to create a new variable configuration
 type ConfigCreateRequestDTO struct {
-	Payload map[string]any `json:"payload" binding:"required"`
+	Name        string         `json:"name"`
+	Payload     map[string]any `json:"payload" binding:"required"`
+}
+
+func (r *ConfigCreateRequestDTO) Validate() error {
+	return validation.ValidateName(r.Name)
 }

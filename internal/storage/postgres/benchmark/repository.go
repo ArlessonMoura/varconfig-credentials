@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	models "projeto-crud-credentials/pkg/models/benchmark"
+	"projeto-crud-credentials/pkg/models"
 )
 
 type Repository struct {
@@ -18,7 +18,7 @@ func NewRepository(db *gorm.DB) *Repository {
 }
 
 // Create cria o registro usando uma transação GORM
-func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaPostgreSQL) error {
+func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchema) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(schema).Error; err != nil {
 			return fmt.Errorf("failed to insert benchmark schema: %w", err)
@@ -27,12 +27,12 @@ func (r *Repository) Create(ctx context.Context, schema *models.BenchmarkSchemaP
 	})
 }
 
-func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaPostgreSQL, error) {
-	var items []*models.BenchmarkSchemaPostgreSQL
+func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchema, error) {
+	var items []*models.BenchmarkSchema
 
-	// Selecionar apenas os campos de metadados para evitar transferência do JSONB (schema_body)
+	// Selecionar apenas os campos de metadados para evitar transferência do JSONB (schema_definition)
 	if err := r.db.WithContext(ctx).
-		Select("id", "name", "created_at", "updated_at").
+		Select("id", "name", "version", "created_at", "updated_at").
 		Order("created_at desc").
 		Find(&items).Error; err != nil {
 		return nil, fmt.Errorf("failed to list benchmark schemas: %w", err)
@@ -41,8 +41,8 @@ func (r *Repository) List(ctx context.Context) ([]*models.BenchmarkSchemaPostgre
 	return items, nil
 }
 
-func (r *Repository) GetByID(ctx context.Context, id int64) (*models.BenchmarkSchemaPostgreSQL, error) {
-	var item models.BenchmarkSchemaPostgreSQL
+func (r *Repository) GetByID(ctx context.Context, id int64) (*models.BenchmarkSchema, error) {
+	var item models.BenchmarkSchema
 	if err := r.db.WithContext(ctx).First(&item, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -53,7 +53,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*models.BenchmarkSc
 }
 
 func (r *Repository) Delete(ctx context.Context, id *int64) error {
-	if err := r.db.WithContext(ctx).Delete(&models.BenchmarkSchemaPostgreSQL{}, *id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Delete(&models.BenchmarkSchema{}, *id).Error; err != nil {
 		return fmt.Errorf("failed to delete benchmark schema: %w", err)
 	}
 	return nil

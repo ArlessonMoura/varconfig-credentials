@@ -7,7 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
-	models "projeto-crud-credentials/pkg/models/config"
+	"projeto-crud-credentials/pkg/models"
 )
 
 // Repository implementa IVarConfigRepository usando PostgreSQL + GORM
@@ -19,15 +19,22 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Create(ctx context.Context, orgID, benchmarkID string, payload map[string]any) (*models.VarConfigPostgreSQL, error) {
+func (r *Repository) Create(ctx context.Context, orgID, benchmarkID string, name string, payload map[string]any) (*models.VarConfig, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	item := &models.VarConfigPostgreSQL{
+	// Converter benchmarkID de string para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return nil, fmt.Errorf("invalid benchmark id format: %w", err)
+	}
+
+	item := &models.VarConfig{
+		Name:        name,
 		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
+		BenchmarkID: benchmarkIDInt,
 		Payload:     payloadJSON,
 	}
 
@@ -38,13 +45,19 @@ func (r *Repository) Create(ctx context.Context, orgID, benchmarkID string, payl
 	return item, nil
 }
 
-func (r *Repository) List(ctx context.Context, orgID, benchmarkID string) ([]*models.VarConfigPostgreSQL, error) {
-	var items []*models.VarConfigPostgreSQL
+func (r *Repository) List(ctx context.Context, orgID, benchmarkID string) ([]*models.VarConfig, error) {
+	var items []*models.VarConfig
+
+	// Converter benchmarkID de string para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return nil, fmt.Errorf("invalid benchmark id format: %w", err)
+	}
 
 	// Selecionar apenas os campos necessários (sem payload) para reduzir transferência de dados
 	if err := r.db.WithContext(ctx).
-		Select("id", "org_id", "benchmark_id", "created_at", "updated_at").
-		Where("org_id = ? AND benchmark_id = ?", orgID, benchmarkID).
+		Select("id", "name", "org_id", "benchmark_id", "created_at", "updated_at").
+		Where("org_id = ? AND benchmark_id = ?", orgID, benchmarkIDInt).
 		Order("created_at DESC").
 		Find(&items).Error; err != nil {
 		return nil, fmt.Errorf("failed to list var_configs: %w", err)
@@ -53,8 +66,8 @@ func (r *Repository) List(ctx context.Context, orgID, benchmarkID string) ([]*mo
 	return items, nil
 }
 
-func (r *Repository) GetByID(ctx context.Context, id int64) (*models.VarConfigPostgreSQL, error) {
-	var item models.VarConfigPostgreSQL
+func (r *Repository) GetByID(ctx context.Context, id int64) (*models.VarConfig, error) {
+	var item models.VarConfig
 
 	if err := r.db.WithContext(ctx).First(&item, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -66,17 +79,19 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*models.VarConfigPo
 	return &item, nil
 }
 
-func (r *Repository) Update(ctx context.Context, id int64, payload map[string]any) (*models.VarConfigPostgreSQL, error) {
+func (r *Repository) Update(ctx context.Context, id int64, name string, payload map[string]any) (*models.VarConfig, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	item := &models.VarConfigPostgreSQL{Payload: payloadJSON}
-
-	if err := r.db.WithContext(ctx).Model(&models.VarConfigPostgreSQL{}).
+	// Atualizar tanto name quanto payload
+	if err := r.db.WithContext(ctx).Model(&models.VarConfig{}).
 		Where("id = ?", id).
-		Update("payload", item.Payload).Error; err != nil {
+		Updates(map[string]interface{}{
+			"name":    name,
+			"payload": payloadJSON,
+		}).Error; err != nil {
 		return nil, fmt.Errorf("failed to update var_config: %w", err)
 	}
 
@@ -85,7 +100,7 @@ func (r *Repository) Update(ctx context.Context, id int64, payload map[string]an
 }
 
 func (r *Repository) Delete(ctx context.Context, id int64) error {
-	if err := r.db.WithContext(ctx).Delete(&models.VarConfigPostgreSQL{}, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Delete(&models.VarConfig{}, id).Error; err != nil {
 		return fmt.Errorf("failed to delete var_config: %w", err)
 	}
 

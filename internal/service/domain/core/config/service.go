@@ -3,21 +3,15 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	dtoBench "projeto-crud-credentials/dto/benchmark"
-	dto "projeto-crud-credentials/dto/config"
+	"projeto-crud-credentials/dto/benchmark"
+	"projeto-crud-credentials/dto/config"
+	"projeto-crud-credentials/internal/common"
+	"projeto-crud-credentials/internal/common/helpers"
 	ports "projeto-crud-credentials/internal/service"
-	models "projeto-crud-credentials/pkg/models/config"
-)
-
-// Erros de domínio básicos
-var (
-	ErrNotFound          = errors.New("varconfig not found")
-	ErrInvalidInput      = errors.New("invalid input: orgID and benchmarkID are required")
-	ErrPayloadValidation = errors.New("payload validation failed")
+	svcvarconfig "projeto-crud-credentials/pkg/handler"
 )
 
 type Service struct {
@@ -33,9 +27,13 @@ func NewService(repository ports.IVarConfigRepository, benchmarkRepo ports.IBenc
 }
 
 // Create cria um novo VarConfig com ID gerado automaticamente pelo PostgreSQL
-func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *dto.ConfigCreateRequestDTO) (*dto.ConfigResponseDTO, error) {
+func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, input *config.ConfigCreateRequestDTO) (*config.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" {
-		return nil, ErrInvalidInput
+		return nil, common.ErrConfigInvalidInput
+	}
+
+	if err := input.Validate(); err != nil {
+		return nil, err
 	}
 
 	// Validar payload contra o schema do benchmark (checagem mínima de tipos)
@@ -43,18 +41,18 @@ func (s *Service) Create(ctx context.Context, orgID string, benchmarkID string, 
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
-	item, err := s.repository.Create(ctx, orgID, benchmarkID, input.Payload)
+	item, err := s.repository.Create(ctx, orgID, benchmarkID, input.Name, input.Payload)
 	if err != nil {
-		return nil, fmt.Errorf("storage error: %w", err)
+		return nil, helpers.ValidateUniqueViolationError(err, common.ErrConfigDuplicateName)
 	}
 
-	return s.mapItemToResponse(item), nil
+	return helpers.MapVarConfigToResponse(item), nil
 }
 
 // List retorna todas as configurações de benchmark (versão leve sem payload)
-func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.ConfigListAllResponseDTO, error) {
+func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*config.ConfigListAllResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" {
-		return nil, ErrInvalidInput
+		return nil, common.ErrConfigInvalidInput
 	}
 
 	items, err := s.repository.List(ctx, orgID, benchmarkID)
@@ -62,30 +60,37 @@ func (s *Service) List(ctx context.Context, orgID, benchmarkID string) (*dto.Con
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
-	var data []dto.ConfigListResponseDTO
+	var data []config.ConfigListResponseDTO
 	for _, item := range items {
-		data = append(data, dto.ConfigListResponseDTO{
+		data = append(data, config.ConfigListResponseDTO{
 			ID:          fmt.Sprintf("%d", item.ID),
+			Name:        item.Name,
 			OrgID:       item.OrgID,
-			BenchmarkID: item.BenchmarkID,
+			BenchmarkID: fmt.Sprintf("%d", item.BenchmarkID),
 			CreatedAt:   item.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:   item.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 
-	return &dto.ConfigListAllResponseDTO{Data: data}, nil
+	return &config.ConfigListAllResponseDTO{Data: data}, nil
 }
 
 // GetByID retorna todas as configurações de um benchmark específico
-func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*dto.ConfigResponseDTO, error) {
+func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*config.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
-		return nil, ErrInvalidInput
+		return nil, common.ErrConfigInvalidInput
 	}
 
 	// Converter ID string para int64
 	var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return nil, fmt.Errorf("invalid id format: %w", err)
+	}
+
+	// Converter benchmarkID para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return nil, fmt.Errorf("invalid benchmark id format: %w", err)
 	}
 
 	item, err := s.repository.GetByID(ctx, intID)
@@ -93,26 +98,35 @@ func (s *Service) GetByID(ctx context.Context, orgID, benchmarkID, id string) (*
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 	if item == nil {
-		return nil, ErrNotFound
+		return nil, common.ErrConfigNotFound
 	}
 
 	// Validar que o item pertence aos IDs fornecidos
-	if item.OrgID != orgID || item.BenchmarkID != benchmarkID {
-		return nil, ErrNotFound
+	if item.OrgID != orgID || item.BenchmarkID != benchmarkIDInt {
+		return nil, common.ErrConfigNotFound
 	}
 
-	return s.mapItemToResponse(item), nil
+	return helpers.MapVarConfigToResponse(item), nil
 }
 
-func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *dto.ConfigUpdateRequestDTO) (*dto.ConfigResponseDTO, error) {
+func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, input *config.ConfigUpdateRequestDTO) (*config.ConfigResponseDTO, error) {
 	if orgID == "" || benchmarkID == "" || id == "" {
-		return nil, ErrInvalidInput
+		return nil, common.ErrConfigInvalidInput
 	}
 
-	// Converter ID string para int64
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
 	var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return nil, fmt.Errorf("invalid id format: %w", err)
+	}
+
+	// Converter benchmarkID para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return nil, fmt.Errorf("invalid benchmark id format: %w", err)
 	}
 
 	// Verificar que o item existe e pertence aos IDs fornecidos
@@ -121,11 +135,11 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 	if existing == nil {
-		return nil, ErrNotFound
+		return nil, common.ErrConfigNotFound
 	}
 
-	if existing.OrgID != orgID || existing.BenchmarkID != benchmarkID {
-		return nil, ErrNotFound
+	if existing.OrgID != orgID || existing.BenchmarkID != benchmarkIDInt {
+		return nil, common.ErrConfigNotFound
 	}
 
 	// Validar payload contra o schema do benchmark (minima de checagem de tipos)
@@ -133,24 +147,29 @@ func (s *Service) Update(ctx context.Context, orgID, benchmarkID, id string, inp
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
-	// Atualizar payload
-	item, err := s.repository.Update(ctx, intID, input.Payload)
+	// Atualizar payload e name
+	item, err := s.repository.Update(ctx, intID, input.Name, input.Payload)
 	if err != nil {
-		return nil, fmt.Errorf("update error: %w", err)
+		return nil, helpers.ValidateUniqueViolationError(err, common.ErrConfigDuplicateName)
 	}
 
-	return s.mapItemToResponse(item), nil
+	return helpers.MapVarConfigToResponse(item), nil
 }
 
 func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) error {
 	if orgID == "" || benchmarkID == "" || id == "" {
-		return ErrInvalidInput
+		return common.ErrConfigInvalidInput
 	}
 
-	// Converter ID string para int64
 	var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return fmt.Errorf("invalid id format: %w", err)
+	}
+
+	// Converter benchmarkID para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return fmt.Errorf("invalid benchmark id format: %w", err)
 	}
 
 	// Verificar que o item existe e pertence aos IDs fornecidos
@@ -159,40 +178,21 @@ func (s *Service) Delete(ctx context.Context, orgID, benchmarkID, id string) err
 		return fmt.Errorf("repository error: %w", err)
 	}
 	if existing == nil {
-		return ErrNotFound
+		return common.ErrConfigNotFound
 	}
 
-	if existing.OrgID != orgID || existing.BenchmarkID != benchmarkID {
-		return ErrNotFound
+	if existing.OrgID != orgID || existing.BenchmarkID != benchmarkIDInt {
+		return common.ErrConfigNotFound
 	}
 
 	return s.repository.Delete(ctx, intID)
-}
-
-// mapItemToResponse converte VarConfigPostgreSQL para VarConfigResponse
-func (s *Service) mapItemToResponse(item *models.VarConfigPostgreSQL) *dto.ConfigResponseDTO {
-	var payload map[string]any
-	if item.Payload != nil {
-		if err := json.Unmarshal(item.Payload, &payload); err != nil {
-			payload = nil
-		}
-	}
-
-	return &dto.ConfigResponseDTO{
-		ID:          fmt.Sprintf("%d", item.ID),
-		OrgID:       item.OrgID,
-		BenchmarkID: item.BenchmarkID,
-		Payload:     payload,
-		CreatedAt:   item.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   item.UpdatedAt.Format(time.RFC3339),
-	}
 }
 
 // payloadValidator encapsula os dados que precisam ser validados
 // contra um esquema dinâmico. Implementa restwrapper.Validatable.
 type payloadValidator struct {
 	payload   map[string]any
-	schemaDef map[string]dtoBench.SchemaFieldDefinition
+	schemaDef map[string]benchmark.SchemaFieldDefinition
 }
 
 func (v *payloadValidator) Validate() error {
@@ -200,7 +200,7 @@ func (v *payloadValidator) Validate() error {
 	for fieldName, def := range v.schemaDef {
 		val, exists := v.payload[fieldName]
 		if def.Required && !exists {
-			return fmt.Errorf("field '%s' is required: %w", fieldName, ErrPayloadValidation)
+			return fmt.Errorf("campo '%s' é obrigatório: %w", fieldName, common.ErrConfigPayloadValidation)
 		}
 		if exists {
 			// Usar o método Validate() da definição de campo
@@ -223,13 +223,13 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 	// Buscar schema
 	bench, err := s.benchmarkRepo.GetByID(ctx, intID)
 	if err != nil {
-		return fmt.Errorf("failed to fetch benchmark schema: %w", err)
+		return fmt.Errorf("repository error: %w", err)
 	}
 	if bench == nil {
-		return fmt.Errorf("benchmark schema not found")
+		return common.ErrBenchmarkSchemaNotFound
 	}
 
-	var schemaDef map[string]dtoBench.SchemaFieldDefinition
+	var schemaDef map[string]benchmark.SchemaFieldDefinition
 	if err := json.Unmarshal(bench.Schema, &schemaDef); err != nil {
 		return fmt.Errorf("failed to unmarshal benchmark schema: %w", err)
 	}
@@ -245,3 +245,5 @@ func (s *Service) validatePayloadAgainstBenchmark(ctx context.Context, benchmark
 
 	return nil
 }
+
+var _ svcvarconfig.IVarConfigService = (*Service)(nil)

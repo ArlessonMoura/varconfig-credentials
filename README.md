@@ -135,7 +135,7 @@ Para detalhes específicos, consulte:
 Armazena definições de schemas para compliance frameworks.
 
 ```go
-type BenchmarkSchemaPostgreSQL struct {
+type BenchmarkSchema struct {
     ID        int64           `gorm:"primaryKey;autoIncrement"`
     Name      string          `gorm:"not null"`
     Schema    json.RawMessage `gorm:"type:jsonb"`           // Definição do schema
@@ -159,7 +159,7 @@ POST   /compliance/benchmarks              # Criar novo
 Armazena configurações de variáveis ligadas a organizações e benchmarks.
 
 ```go
-type VarConfigPostgreSQL struct {
+type VarConfig struct {
     ID          int64           `gorm:"primaryKey;autoIncrement"`
     OrgID       string          `gorm:"not null;index:idx_varcfg_org_bench"`
     BenchmarkID string          `gorm:"not null;index:idx_varcfg_org_bench"`
