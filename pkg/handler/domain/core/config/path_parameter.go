@@ -1,9 +1,7 @@
 package config
 
 import (
-	"errors"
-	"fmt"
-	"strings"
+	"projeto-crud-credentials/internal/common/validation"
 )
 
 type PathParams struct {
@@ -14,26 +12,14 @@ type PathParams struct {
 
 // Validate implementa a interface Validatable
 func (p *PathParams) Validate() error {
-	if err := validateRequiredString(p.OrgID, "orgId"); err != nil {
+	if err := validation.ValidateRequiredString(p.OrgID, "orgId"); err != nil {
 		return err
 	}
-	if err := validateRequiredString(p.BenchmarkID, "benchmark_id"); err != nil {
+	if err := validation.ValidateRequiredString(p.BenchmarkID, "benchmark_id"); err != nil {
 		return err
 	}
 	if p.ID != "" {
-		if err := validateRequiredString(p.ID, "id"); err != nil {
-			return err
-		}
-		if strings.Contains(p.ID, " ") {
-			return errors.New("id inválido")
-		}
-	}
-	return nil
-}
-
-func validateRequiredString(value, paramName string) error {
-	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("%s não pode estar vazio", paramName)
+		return validation.ValidateID(p.ID)
 	}
 	return nil
 }

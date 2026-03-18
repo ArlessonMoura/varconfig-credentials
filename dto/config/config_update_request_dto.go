@@ -1,8 +1,7 @@
 package config
 
 import (
-	"errors"
-	"strings"
+	"projeto-crud-credentials/internal/common/validation"
 )
 
 // ConfigUpdateRequestDTO represents the data required to update an existing variable configuration
@@ -12,8 +11,5 @@ type ConfigUpdateRequestDTO struct {
 }
 
 func (r *ConfigUpdateRequestDTO) Validate() error {
-	if strings.TrimSpace(r.Name) == "" {
-		return errors.New("name is required")
-	}
-	return nil
+	return validation.ValidateName(r.Name)
 }

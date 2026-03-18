@@ -63,7 +63,7 @@ func (h *Handler) Create(wrapper *restwrapper.Wrapper) {
 			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
 			return
 		}
-		if errMsg == "name is required" {
+		if errMsg == "nome é obrigatório" {
 			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
 			return
 		}
@@ -130,7 +130,7 @@ func (h *Handler) Update(wrapper *restwrapper.Wrapper) {
 	}
 
 	if pathParams.ID == "" {
-		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id is required for update")
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id é obrigatório para atualização")
 		return
 	}
 
@@ -152,7 +152,7 @@ func (h *Handler) Update(wrapper *restwrapper.Wrapper) {
 			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
 			return
 		}
-		if errMsg == "name is required" {
+		if errMsg == "nome é obrigatório" {
 			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, errMsg)
 			return
 		}
@@ -177,7 +177,7 @@ func (h *Handler) Delete(wrapper *restwrapper.Wrapper) {
 	}
 
 	if pathParams.ID == "" {
-		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id is required for delete")
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id é obrigatório para exclusão")
 		return
 	}
 

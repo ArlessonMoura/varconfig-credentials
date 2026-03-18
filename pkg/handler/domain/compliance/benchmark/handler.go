@@ -72,7 +72,7 @@ func (h *Handler) Create(wrapper *restwrapper.Wrapper) {
 
 	result, err := h.svc.Create(ctx, &req)
 	if err != nil {
-		if err.Error() == "name is required" || err.Error() == "version is required" {
+		if err.Error() == "nome é obrigatório" || err.Error() == "version é obrigatório" {
 			wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
 			return
 		}

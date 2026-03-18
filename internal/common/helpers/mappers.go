@@ -10,7 +10,7 @@ import (
 	"projeto-crud-credentials/pkg/models"
 )
 
-// MapVarConfigToResponse converte VarConfig para ConfigResponseDTO
+// VarConfig para ConfigResponseDTO
 func MapVarConfigToResponse(item *models.VarConfig) *config.ConfigResponseDTO {
 	var payload map[string]any
 	if item.Payload != nil {
@@ -23,14 +23,14 @@ func MapVarConfigToResponse(item *models.VarConfig) *config.ConfigResponseDTO {
 		ID:          fmt.Sprintf("%d", item.ID),
 		Name:        item.Name,
 		OrgID:       item.OrgID,
-		BenchmarkID: item.BenchmarkID,
+		BenchmarkID: fmt.Sprintf("%d", item.BenchmarkID),
 		Payload:     payload,
 		CreatedAt:   item.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   item.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
-// MapBenchmarkSchemaToResponse converte BenchmarkSchema para BenchmarkResponseDTO (sem schema)
+// BenchmarkSchema para BenchmarkResponseDTO 
 func MapBenchmarkSchemaToResponse(item *models.BenchmarkSchema) *benchmark.BenchmarkResponseDTO {
 	return &benchmark.BenchmarkResponseDTO{
 		ID:         fmt.Sprintf("%d", item.ID),
@@ -42,8 +42,7 @@ func MapBenchmarkSchemaToResponse(item *models.BenchmarkSchema) *benchmark.Bench
 	}
 }
 
-// MapBenchmarkSchemaToResponseWithSchema converte BenchmarkSchema para BenchmarkResponseDTO (com schema)
-func MapBenchmarkSchemaToResponseWithSchema(item *models.BenchmarkSchema) *benchmark.BenchmarkResponseDTO {
+// BenchmarkSchema para BenchmarkResponseDTO func MapBenchmarkSchemaToResponseWithSchema(item *models.BenchmarkSchema) *benchmark.BenchmarkResponseDTO {
 	schemaBody := ConvertSchemaBodyToStringMap(item.Schema)
 
 	return &benchmark.BenchmarkResponseDTO{
@@ -56,7 +55,7 @@ func MapBenchmarkSchemaToResponseWithSchema(item *models.BenchmarkSchema) *bench
 	}
 }
 
-// ConvertSchemaBodyToStringMap converte json.RawMessage para map[string]string
+// Schema JSON para map[string]string
 func ConvertSchemaBodyToStringMap(schema json.RawMessage) map[string]string {
 	var schemaDef map[string]benchmark.SchemaFieldDefinition
 	if err := json.Unmarshal(schema, &schemaDef); err != nil {
@@ -76,7 +75,7 @@ func ConvertSchemaBodyToStringMap(schema json.RawMessage) map[string]string {
 	return result
 }
 
-// ConvertSchemaMapToStringMap converte map[string]SchemaFieldDefinition para map[string]string
+// Schema map para map[string]string
 func ConvertSchemaMapToStringMap(schema map[string]benchmark.SchemaFieldDefinition) map[string]string {
 	result := make(map[string]string)
 	for k, v := range schema {

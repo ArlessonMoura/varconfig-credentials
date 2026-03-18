@@ -3,21 +3,14 @@ package benchmark
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	dtoBenchmark "projeto-crud-credentials/dto/benchmark"
+	"projeto-crud-credentials/internal/common"
 	"projeto-crud-credentials/internal/common/helpers"
 	ports "projeto-crud-credentials/internal/service"
 	svcbenchmark "projeto-crud-credentials/pkg/handler"
 	"projeto-crud-credentials/pkg/models"
-)
-
-var (
-	ErrInvalidInput     = errors.New("invalid input: name is required")
-	ErrEmptySchema      = errors.New("schema cannot be empty")
-	ErrSchemaNotFound   = errors.New("schema not found")
-	ErrDuplicateName    = errors.New("schema with this name already exists")
 )
 
 type Service struct {
@@ -35,7 +28,7 @@ func (s *Service) Create(ctx context.Context, schemaRequest *dtoBenchmark.Benchm
 	}
 
 	if len(schemaRequest.Schema) == 0 {
-		return nil, ErrEmptySchema
+		return nil, common.ErrBenchmarkEmptySchema
 	}
 
 	schemaJSON, err := json.Marshal(schemaRequest.Schema)
@@ -50,13 +43,13 @@ func (s *Service) Create(ctx context.Context, schemaRequest *dtoBenchmark.Benchm
 	}
 
 	if err := s.relationalRepo.Create(ctx, schema); err != nil {
-		return nil, helpers.ValidateUniqueViolationError(err, ErrDuplicateName)
+		return nil, helpers.ValidateUniqueViolationError(err, common.ErrBenchmarkDuplicateName)
 	}
 
 	return schema, nil
 }
 
-// List recupera todos os schemas disponíveis (versão enxuta sem SchemaBody)
+// List recupera todos os schemas disponíveis 
 func (s *Service) List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponseDTO, error) {
 	items, err := s.relationalRepo.List(ctx)
 	if err != nil {
@@ -80,8 +73,7 @@ func (s *Service) List(ctx context.Context) (*dtoBenchmark.BenchmarkListResponse
 
 // GetByID busca um schema pelo ID
 func (s *Service) GetByID(ctx context.Context, id string) (*dtoBenchmark.BenchmarkResponseDTO, error) {
-	// id vem como string (do handler). Converter para int64
-	var intID int64
+		var intID int64
 	if _, err := fmt.Sscan(id, &intID); err != nil {
 		return nil, fmt.Errorf("invalid id format: %w", err)
 	}
@@ -91,13 +83,13 @@ func (s *Service) GetByID(ctx context.Context, id string) (*dtoBenchmark.Benchma
 		return nil, fmt.Errorf("failed to get schema from repository: %w", err)
 	}
 	if item == nil {
-		return nil, ErrSchemaNotFound
+		return nil, common.ErrBenchmarkSchemaNotFound
 	}
 
 	return helpers.MapBenchmarkSchemaToResponseWithSchema(item), nil
 }
 
-// Delete remove um benchmark schema e automaticamente todas as configurações associadas (CASCADE)
+// Delete remove um benchmark schema e todas as configurações associadas 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	// Converter ID string para int64
 	var intID int64
@@ -111,8 +103,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to get benchmark schema: %w", err)
 	}
 
-	// Deletar o schema (cascade deletará automaticamente os VarConfigs associados)
-	if err := s.relationalRepo.Delete(ctx, &intID); err != nil {
+		if err := s.relationalRepo.Delete(ctx, &intID); err != nil {
 		return fmt.Errorf("failed to delete benchmark schema: %w", err)
 	}
 

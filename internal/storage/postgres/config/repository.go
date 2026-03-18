@@ -19,16 +19,22 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Create(ctx context.Context, orgID, benchmarkID, name string, payload map[string]any) (*models.VarConfig, error) {
+func (r *Repository) Create(ctx context.Context, orgID, benchmarkID string, name string, payload map[string]any) (*models.VarConfig, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
+	// Converter benchmarkID de string para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return nil, fmt.Errorf("invalid benchmark id format: %w", err)
+	}
+
 	item := &models.VarConfig{
 		Name:        name,
 		OrgID:       orgID,
-		BenchmarkID: benchmarkID,
+		BenchmarkID: benchmarkIDInt,
 		Payload:     payloadJSON,
 	}
 
@@ -42,10 +48,16 @@ func (r *Repository) Create(ctx context.Context, orgID, benchmarkID, name string
 func (r *Repository) List(ctx context.Context, orgID, benchmarkID string) ([]*models.VarConfig, error) {
 	var items []*models.VarConfig
 
+	// Converter benchmarkID de string para int64
+	var benchmarkIDInt int64
+	if _, err := fmt.Sscanf(benchmarkID, "%d", &benchmarkIDInt); err != nil {
+		return nil, fmt.Errorf("invalid benchmark id format: %w", err)
+	}
+
 	// Selecionar apenas os campos necessários (sem payload) para reduzir transferência de dados
 	if err := r.db.WithContext(ctx).
 		Select("id", "name", "org_id", "benchmark_id", "created_at", "updated_at").
-		Where("org_id = ? AND benchmark_id = ?", orgID, benchmarkID).
+		Where("org_id = ? AND benchmark_id = ?", orgID, benchmarkIDInt).
 		Order("created_at DESC").
 		Find(&items).Error; err != nil {
 		return nil, fmt.Errorf("failed to list var_configs: %w", err)

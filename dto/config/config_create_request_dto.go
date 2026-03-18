@@ -1,9 +1,7 @@
-// Package config contains DTOs (Data Transfer Objects) for variable configuration operations
 package config
 
 import (
-	"errors"
-	"strings"
+	"projeto-crud-credentials/internal/common/validation"
 )
 
 // ConfigCreateRequestDTO represents the data required to create a new variable configuration
@@ -13,8 +11,5 @@ type ConfigCreateRequestDTO struct {
 }
 
 func (r *ConfigCreateRequestDTO) Validate() error {
-	if strings.TrimSpace(r.Name) == "" {
-		return errors.New("name is required")
-	}
-	return nil
+	return validation.ValidateName(r.Name)
 }

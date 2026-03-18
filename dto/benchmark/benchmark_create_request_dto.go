@@ -1,8 +1,7 @@
 package benchmark
 
 import (
-	"errors"
-	"strings"
+	"projeto-crud-credentials/internal/common/validation"
 )
 
 // BenchmarkCreateRequestDTO represents the data required to create a new benchmark schema
@@ -13,11 +12,8 @@ type BenchmarkCreateRequestDTO struct {
 }
 
 func (r *BenchmarkCreateRequestDTO) Validate() error {
-	if strings.TrimSpace(r.Name) == "" {
-		return errors.New("name is required")
+	if err := validation.ValidateName(r.Name); err != nil {
+		return err
 	}
-	if strings.TrimSpace(r.Version) == "" {
-		return errors.New("version is required")
-	}
-	return nil
+	return validation.ValidateRequiredField(r.Version, "version")
 }
