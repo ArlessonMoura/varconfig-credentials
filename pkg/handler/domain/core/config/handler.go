@@ -19,36 +19,35 @@ func NewHandler(svc ports.IVarConfigService) *Handler {
 	}
 }
 
-// Handle implementa a interface IRestHandler do restwrapper
 func (h *Handler) Handle(wrapper *restwrapper.Wrapper) {
-	// Binding centralizado dos path parameters com validação automática
-	var pathParams PathParams
-	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
-		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
-		return
-	}
-
 	method := wrapper.RequestWrapper.Method()
 	switch method {
 	case http.MethodPost:
-		h.Create(wrapper, pathParams)
+		h.Create(wrapper)
 	case http.MethodGet:
-		if pathParams.ID != "" {
-			h.GetByID(wrapper, pathParams)
+		id, exists := wrapper.RequestWrapper.GetPathParam("id")
+		if exists && id != nil && *id != "" {
+			h.GetByID(wrapper)
 		} else {
-			h.List(wrapper, pathParams)
+			h.List(wrapper)
 		}
 	case http.MethodPut:
-		h.Update(wrapper, pathParams)
+		h.Update(wrapper)
 	case http.MethodDelete:
-		h.Delete(wrapper, pathParams)
+		h.Delete(wrapper)
 	default:
 		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusMethodNotAllowed, "method not allowed")
 	}
 }
 
-func (h *Handler) Create(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+func (h *Handler) Create(wrapper *restwrapper.Wrapper) {
 	ctx := context.Background()
+
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	var req dto.ConfigCreateRequestDTO
 	if err := wrapper.RequestWrapper.BindBody(&req); err != nil {
@@ -71,8 +70,14 @@ func (h *Handler) Create(wrapper *restwrapper.Wrapper, pathParams PathParams) {
 	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusCreated, result)
 }
 
-func (h *Handler) GetByID(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+func (h *Handler) GetByID(wrapper *restwrapper.Wrapper) {
 	ctx := context.Background()
+
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	// Validar ID adicional para garantir que não contém espaços
 	if err := pathParams.Validate(); err != nil {
@@ -89,8 +94,14 @@ func (h *Handler) GetByID(wrapper *restwrapper.Wrapper, pathParams PathParams) {
 	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, result)
 }
 
-func (h *Handler) List(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+func (h *Handler) List(wrapper *restwrapper.Wrapper) {
 	ctx := context.Background()
+
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	result, err := h.svc.List(ctx, pathParams.OrgID, pathParams.BenchmarkID)
 	if err != nil {
@@ -101,8 +112,14 @@ func (h *Handler) List(wrapper *restwrapper.Wrapper, pathParams PathParams) {
 	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, result)
 }
 
-func (h *Handler) Update(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+func (h *Handler) Update(wrapper *restwrapper.Wrapper) {
 	ctx := context.Background()
+
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if pathParams.ID == "" {
 		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id is required for update")
@@ -134,8 +151,14 @@ func (h *Handler) Update(wrapper *restwrapper.Wrapper, pathParams PathParams) {
 	wrapper.ResponseWrapper.WriteSuccessResponse(http.StatusOK, result)
 }
 
-func (h *Handler) Delete(wrapper *restwrapper.Wrapper, pathParams PathParams) {
+func (h *Handler) Delete(wrapper *restwrapper.Wrapper) {
 	ctx := context.Background()
+
+	var pathParams PathParams
+	if err := wrapper.RequestWrapper.BindPathParams(&pathParams); err != nil {
+		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if pathParams.ID == "" {
 		wrapper.ResponseWrapper.WriteClientErrorResponse(http.StatusBadRequest, "id is required for delete")
